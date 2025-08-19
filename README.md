@@ -1,2 +1,2 @@
-# FRA502 LAB1
+# FRA502-LAB-6703
 Peeradon Ruengkaew 6703 (Moke)
