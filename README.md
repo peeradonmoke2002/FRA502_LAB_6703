@@ -3,7 +3,7 @@ Peeradon Ruengkaew 6703 (Moke)
 
 ## Demo Video
 
-![demo_video](./images/output.mp4)
+![demove_video](./images/output.mp4)
 
 ## Insallation
 
