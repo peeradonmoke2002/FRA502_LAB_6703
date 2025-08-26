@@ -20,9 +20,7 @@ class KillerNode(Node):
     def __init__(self):
         super().__init__('killer_node')
 
-        # Publisher for turtle velocity
         self.cmd_pub_2 = self.create_publisher(Twist, '/turtle2/cmd_vel', 10)
-        # Subscriptions
         self.create_subscription(Int64,'/turtle1/pizza_count', self.pizza_count_cb, 10)
         self.create_subscription(Pose, '/turtle1/pose', self.pose_cb_1, 10)
         self.create_subscription(Pose, '/turtle2/pose', self.pose_cb_2, 10)
@@ -32,10 +30,8 @@ class KillerNode(Node):
         self.current_pose_turtle1 = Pose()
         self.current_pose_turtle2 = Pose()
         self.pizza_count = Int64()
-        # Default max pizza count (should be the same as in eater.py)
         self.max_pizza_count = 20
 
-        # Control loop timer
         self.create_timer(0.05, self.on_timer)
         
         self.remove_turtle_client = self.create_client(Kill, '/remove_turtle')
@@ -66,11 +62,9 @@ class KillerNode(Node):
         
     def on_timer(self):
         """Control loop: navigate to target and call eat when close enough."""
-        # Only pursue turtle1 when all pizzas have been eaten (count equals max)
         if self.pizza_count.data < self.max_pizza_count:
             return
 
-        # Go to the first target in the list
         target = self.current_pose_turtle1
         dx = target.x - self.current_pose_turtle2.x
         dy = target.y - self.current_pose_turtle2.y
