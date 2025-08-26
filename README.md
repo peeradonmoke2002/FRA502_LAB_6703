@@ -88,6 +88,10 @@ Peeradon Ruengkaew 6703 (Moke)
     cd ~/FRA502_LAB_6703
     rviz2 -d src/lab2.rviz
     ```
+7. Open a new terminal and set max pizza from topic `/set_max_pizza`
+   ```bash
+   ros2 topic pub -r 100 /set_max_pizza std_msgs/msg/Int64 "data: 20"
+   ```
 
 ## Usage
 
