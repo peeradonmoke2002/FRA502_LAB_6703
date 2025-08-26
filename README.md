@@ -14,15 +14,19 @@ Peeradon Ruengkaew 6703 (Moke)
    cd FRA502_LAB_6703
    ```
 
-2. Run submodule command to Add turtlesim_plus package
+2. Run submodule command to Add turtlesim_plus package and pygame python
    ```bash
    git submodule update --init --recursive
    ```
-3. Build the workspace
+   and install pygame
+   ```bash
+   pip install pygame==2.3.0
+   ```
+4. Build the workspace
    ```bash
    colcon build --symlink-install
    ```
-4. Source the workspace
+5. Source the workspace
     in every new terminal, run
 
    ```bash
