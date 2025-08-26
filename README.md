@@ -46,7 +46,7 @@ Peeradon Ruengkaew 6703 (Moke)
    ```
    and 
     ```bash
-    chmod +x src/turtlesim_plus/scripts/*.py
+    chmod +x src/turtlesim_plus/turtlesim_plus/scripts/*.py
     ```
     then build and source the workspace again
     ```bash
