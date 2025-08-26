@@ -30,7 +30,7 @@ Peeradon Ruengkaew 6703 (Moke)
    ```
    However, you can add this line to your ~/.bashrc file to source the workspace automatically when you open a new terminal.
    ```bash
-   echo "source /path/to/your/workspace/install/setup.bash" >> ~/.bashrc
+   echo "source ~/FRA502_LAB_6703/install/setup.bash" >> ~/.bashrc
    ```
    and source the ~/.bashrc file
    ```bash
