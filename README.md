@@ -47,10 +47,9 @@ Peeradon Ruengkaew 6703 (Moke)
 2. Spawn second turtle (turtle2)
    ```bash
    ros2 service call /spawn_turtle turtlesim/srv/Spawn "x: 0.0
-y: 0.0
-theta: 0.0
-name: 'turtle2' 
-
+    y: 0.0
+    theta: 0.0
+    name: 'turtle2' 
    ```
 
 3. Open a new terminal and run the eater node
