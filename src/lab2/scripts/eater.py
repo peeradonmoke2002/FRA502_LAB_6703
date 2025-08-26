@@ -26,6 +26,8 @@ class EaterNode(Node):
         self.target = []
         self.last_spawn = None
         self.pizza_count = Int64()
+        # Track spawned and eaten pizzas locally to prevent exceeding limit
+        self.spawn_requests_count = 0
 
         # Control loop timer
         self.create_timer(0.05, self.on_timer)
@@ -40,13 +42,24 @@ class EaterNode(Node):
 
     def pizza_count_cb(self,msg):
         self.pizza_count = msg
-        # self.get_logger().info(f'Current pizza count: {self.pizza_count.data}')
+        # Ensure our local tracking doesn't go below the actual count
+        if self.spawn_requests_count < msg.data:
+            self.spawn_requests_count = msg.data
+        # self.get_logger().info(f'Current pizza count: {self.pizza_count.data}, Spawn requests: {self.spawn_requests_count}')
         
     def eat_pizza(self):
         eat_req = Empty.Request()
         self.eat_client.call_async(eat_req)
         
     def spawn_pizza(self,x,y):
+        # Simple check - if we've requested 20 or more pizzas, don't spawn more
+        if self.spawn_requests_count >= 20:
+            self.get_logger().info('Pizza limit reached; not spawning new pizza.')
+            return
+        
+        # Increment our local counter for spawn requests
+        self.spawn_requests_count += 1
+        
         spawn_req = GivePosition.Request()
         spawn_req.x = x
         spawn_req.y = y
@@ -56,11 +69,13 @@ class EaterNode(Node):
         """Handle new click positions; spawn pizza once per unique click."""
         pos = (round(msg.x, 2), round(msg.y, 2))
         if self.last_spawn != pos:
-            if self.pizza_count.data >= 20:
+            # Simple check using our spawn request counter
+            if self.spawn_requests_count >= 20:
                 self.get_logger().info('Pizza limit reached; not spawning new pizza.')
             else:
                 self.spawn_pizza(msg.x, msg.y)
-            # self.get_logger().info(f"Spawned pizza at {pos}")
+                
+            # Always add to targets for movement
             if not hasattr(self, 'targets'):
                 self.targets = []
             self.targets.append(msg)
@@ -68,16 +83,23 @@ class EaterNode(Node):
             
     def goal_pose(self, msg: PoseStamped):
         """Handle new goal pose; update target if different."""
-        pos = (round(msg.x, 2), round(msg.y, 2))
+        pos = (round(msg.pose.position.x, 2), round(msg.pose.position.y, 2))
         if self.last_spawn != pos:
-            if self.pizza_count.data >= 20:
+            # Simple check using our spawn request counter
+            if self.spawn_requests_count >= 20:
                 self.get_logger().info('Pizza limit reached; not spawning new pizza.')
             else:
-                self.spawn_pizza(msg.x, msg.y)
-            # self.get_logger().info(f"Spawned pizza at {pos}")
+                self.spawn_pizza(msg.pose.position.x, msg.pose.position.y)
+                
+            # Always add to targets for movement
             if not hasattr(self, 'targets'):
                 self.targets = []
-            self.targets.append(msg)
+            # Convert PoseStamped to Point for consistency with other targets
+            point = Point()
+            point.x = msg.pose.position.x
+            point.y = msg.pose.position.y
+            point.z = msg.pose.position.z
+            self.targets.append(point)
             self.last_spawn = pos
             
 
@@ -110,9 +132,14 @@ class EaterNode(Node):
             # Arrived: stop and eat
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
-            self.get_logger().info('Arrived at pizza; eating!')
-            if self.pizza_count.data < 20:
+            
+            # Only eat if we haven't reached the pizza limit
+            if self.pizza_count.data <= 20:
+                self.get_logger().info('Arrived at pizza; eating!')
                 self.eat_pizza()
+            else:
+                self.get_logger().info('Arrived at position; pizza limit reached.')
+                
             # Remove the reached target
             self.targets.pop(0)
             self.cmd_pub.publish(cmd)
