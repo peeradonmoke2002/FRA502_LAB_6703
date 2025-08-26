@@ -83,7 +83,7 @@ Peeradon Ruengkaew 6703 (Moke)
 6. Open a new terminal and run RViz2 with the provided configuration file
 
     ```bash
-    cd ~/path/to/your/workspace/FRA502_LAB_6703/
+    cd ~/FRA502_LAB_6703
     rviz2 -d src/lab2.rviz
     ```
 
