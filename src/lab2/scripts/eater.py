@@ -28,6 +28,10 @@ class EaterNode(Node):
         self.pizza_count = Int64()
         # Track spawned and eaten pizzas locally to prevent exceeding limit
         self.spawn_requests_count = 0
+        # Maximum number of pizzas allowed (default: 20)
+        self.max_pizza_count = 20
+        
+        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_cb, 10)
 
         # Control loop timer
         self.create_timer(0.05, self.on_timer)
@@ -40,21 +44,25 @@ class EaterNode(Node):
         while not self.eat_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Waiting for eat service...')
 
-    def pizza_count_cb(self,msg):
+    def pizza_count_cb(self, msg):
         self.pizza_count = msg
         # Ensure our local tracking doesn't go below the actual count
         if self.spawn_requests_count < msg.data:
             self.spawn_requests_count = msg.data
         # self.get_logger().info(f'Current pizza count: {self.pizza_count.data}, Spawn requests: {self.spawn_requests_count}')
         
+    def set_max_pizza_cb(self, msg):
+        self.max_pizza_count = msg.data
+        self.get_logger().info(f'Set max pizza to {self.max_pizza_count}')
+        
     def eat_pizza(self):
         eat_req = Empty.Request()
         self.eat_client.call_async(eat_req)
         
     def spawn_pizza(self,x,y):
-        # Simple check - if we've requested 20 or more pizzas, don't spawn more
-        if self.spawn_requests_count >= 20:
-            self.get_logger().info('Pizza limit reached; not spawning new pizza.')
+        # Simple check - if we've requested max or more pizzas, don't spawn more
+        if self.spawn_requests_count >= self.max_pizza_count:
+            self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
             return
         
         # Increment our local counter for spawn requests
@@ -70,8 +78,8 @@ class EaterNode(Node):
         pos = (round(msg.x, 2), round(msg.y, 2))
         if self.last_spawn != pos:
             # Simple check using our spawn request counter
-            if self.spawn_requests_count >= 20:
-                self.get_logger().info('Pizza limit reached; not spawning new pizza.')
+            if self.spawn_requests_count >= self.max_pizza_count:
+                self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
             else:
                 self.spawn_pizza(msg.x, msg.y)
                 
@@ -86,8 +94,8 @@ class EaterNode(Node):
         pos = (round(msg.pose.position.x, 2), round(msg.pose.position.y, 2))
         if self.last_spawn != pos:
             # Simple check using our spawn request counter
-            if self.spawn_requests_count >= 20:
-                self.get_logger().info('Pizza limit reached; not spawning new pizza.')
+            if self.spawn_requests_count >= self.max_pizza_count:
+                self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
             else:
                 self.spawn_pizza(msg.pose.position.x, msg.pose.position.y)
                 
@@ -134,11 +142,11 @@ class EaterNode(Node):
             cmd.angular.z = 0.0
             
             # Only eat if we haven't reached the pizza limit
-            if self.pizza_count.data <= 20:
+            if self.pizza_count.data <= self.max_pizza_count:
                 self.get_logger().info('Arrived at pizza; eating!')
                 self.eat_pizza()
             else:
-                self.get_logger().info('Arrived at position; pizza limit reached.')
+                self.get_logger().info(f'Arrived at position; pizza limit ({self.max_pizza_count}) reached.')
                 
             # Remove the reached target
             self.targets.pop(0)

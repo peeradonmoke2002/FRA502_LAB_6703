@@ -27,7 +27,8 @@ class KillerNode(Node):
         self.create_subscription(Pose, '/turtle1/pose', self.pose_cb_1, 10)
         self.create_subscription(Pose, '/turtle2/pose', self.pose_cb_2, 10)
 
-        
+        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_cb, 10)
+
         self.current_pose_turtle1 = Pose()
         self.current_pose_turtle2 = Pose()
         self.pizza_count = Int64()
@@ -38,6 +39,12 @@ class KillerNode(Node):
         self.remove_turtle_client = self.create_client(Kill, '/remove_turtle')
         while not self.remove_turtle_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Waiting for eat service...')
+        
+        
+    def set_max_pizza_cb(self, msg):
+        self.max_pizza_count = msg.data
+        self.get_logger().info(f'Set max pizza to {self.max_pizza_count}')
+        
         
     def eat_turtle(self,name):
         kill_req = Kill.Request()
@@ -57,7 +64,7 @@ class KillerNode(Node):
         
     def on_timer(self):
         """Control loop: navigate to target and call eat when close enough."""
-        if self.pizza_count.data != 20:
+        if self.pizza_count.data != self.max_pizza_count:
             return
 
         # Go to the first target in the list
