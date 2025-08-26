@@ -91,6 +91,7 @@ class EaterNode(Node):
             
     def goal_pose(self, msg: PoseStamped):
         """Handle new goal pose; update target if different."""
+        self.get_logger().info(f"Received goal_pose: x={msg.pose.position.x}, y={msg.pose.position.y}")
         pos = (round(msg.pose.position.x, 2), round(msg.pose.position.y, 2))
         if self.last_spawn != pos:
             # Simple check using our spawn request counter
