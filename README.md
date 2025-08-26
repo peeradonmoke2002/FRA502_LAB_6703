@@ -1,7 +1,9 @@
 # FRA502-LAB-6703
 Peeradon Ruengkaew 6703 (Moke)
 
+## Demo Video
 
+![demo_video](./images/output.mp4)
 
 ## Insallation
 
