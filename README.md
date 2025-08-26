@@ -96,6 +96,6 @@ Peeradon Ruengkaew 6703 (Moke)
 ## Usage
 
 1. In the turtlesim window, you will see two turtles: turtle1 (the eater) and turtle2 (the killer).
-2. The eater turtle (turtle1) will move around the screen and "eat" base from your clicks on gui and set goal pose in rviz2. It will eat maximum 20 pizzas and pizza will not spawn and count however the function click and set goal to move is still work.
+2. The eater turtle (turtle1) will move around the screen and "eat" base from your clicks on gui and set goal pose in rviz2. It will eat maximum base from topic set max pizza and pizza will not spawn and count however the function click and set goal to move is still work.
 3. After turtle1 has eaten 20 pizzas, turtle2 (the killer) will start chasing turtle1. So try to click or set goal pose to move turtle1 to avoid being caught by turtle2.
 4. Can see all action in rviz2
