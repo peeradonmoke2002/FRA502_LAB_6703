@@ -32,6 +32,8 @@ class KillerNode(Node):
         self.current_pose_turtle1 = Pose()
         self.current_pose_turtle2 = Pose()
         self.pizza_count = Int64()
+        # Default max pizza count (should be the same as in eater.py)
+        self.max_pizza_count = 20
 
         # Control loop timer
         self.create_timer(0.05, self.on_timer)
@@ -64,7 +66,8 @@ class KillerNode(Node):
         
     def on_timer(self):
         """Control loop: navigate to target and call eat when close enough."""
-        if self.pizza_count.data != self.max_pizza_count:
+        # Only pursue turtle1 when all pizzas have been eaten (count equals max)
+        if self.pizza_count.data < self.max_pizza_count:
             return
 
         # Go to the first target in the list
