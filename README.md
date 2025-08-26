@@ -55,15 +55,15 @@ Peeradon Ruengkaew 6703 (Moke)
 3. Open a new terminal and run the eater node
     ```bash
     ros2 run lab2 eater.py
-     ```
+    ```
 4. Open a new terminal and run the killer node
     ```bash
     ros2 run lab2 killer.py
-     ```
+    ```
 5. Open a new terminal and run the turtlesim_pose node
     ```bash
     ros2 run lab2 turtlesim_pose.py
-     ```
+    ```
 6. Open a new terminal and run RViz2 with the provided configuration file
 
     ```bash
