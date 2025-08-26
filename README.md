@@ -1,6 +1,18 @@
 # FRA502-LAB-6703
 Peeradon Ruengkaew 6703 (Moke)
 
+## Table of Contents
+
+- [System Architecture](#system-architecture)
+- [Demo Video](#demo-video)
+- [Installation](#insallation)
+- [Run the nodes](#run-the-nodes)
+- [Usage](#usage)
+
+## System Architecture
+
+![system_architecture](./images/system_architecture.png)
+
 ## Demo Video
 
 [demove_video](./images/output.mp4)
