@@ -32,6 +32,10 @@ Peeradon Ruengkaew 6703 (Moke)
    ```bash
    echo "source /path/to/your/workspace/install/setup.bash" >> ~/.bashrc
    ```
+   and source the ~/.bashrc file
+   ```bash
+   source ~/.bashrc
+   ```
 
 
 ## Run the nodes
@@ -39,20 +43,28 @@ Peeradon Ruengkaew 6703 (Moke)
    ```bash
    ros2 run turtlesim_plus turtlesim_plus_node.py
     ```
-2. Open a new terminal and run the eater node
+
+2. Spawn second turtle (turtle2)
+   ```bash
+   ros2 service call /spawn_turtle turtlesim/srv/Spawn "x: 0.0 y: 0.0 theta: 0.0 name: 'turtle2'" 
+   ```
+
+3. Open a new terminal and run the eater node
     ```bash
     ros2 run lab2 eater.py
      ```
-3. Open a new terminal and run the killer node
+4. Open a new terminal and run the killer node
     ```bash
     ros2 run lab2 killer.py
      ```
-4. Open a new terminal and run the turtlesim_pose node
+5. Open a new terminal and run the turtlesim_pose node
     ```bash
     ros2 run lab2 turtlesim_pose.py
      ```
-5. Open a new terminal and run RViz2 with the provided configuration file
+6. Open a new terminal and run RViz2 with the provided configuration file
+
     ```bash
+    cd ~/path/to/your/workspace/FRA502_LAB_6703/
     rviz2 -d src/lab2.rviz
     ```
 
