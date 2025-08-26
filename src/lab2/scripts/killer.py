@@ -1,11 +1,5 @@
 #!/usr/bin/python3
 
-
-# Control turtle2 to target position by publishing velocity to /turtle2/cmd_vel using pose feedback from /turtle2/pose.
-# Track eater target by subscribing to /turtle1/pose as moving pursuit target after all pizzas are eaten.
-# Terminate on capture by calling /remove_turtle service when close enough to eater, then stop motion.
-# Node must be able to run by ros2 run in Terminal.
-# ros2 service call /remove_turtle turtlesim/srv/Kill "name: ''"
 import rclpy
 from rclpy.node import Node
 import math
@@ -61,7 +55,6 @@ class KillerNode(Node):
         
         
     def on_timer(self):
-        """Control loop: navigate to target and call eat when close enough."""
         if self.pizza_count.data < self.max_pizza_count:
             return
 
@@ -71,7 +64,7 @@ class KillerNode(Node):
         dist = math.hypot(dx, dy)
         angle_to_target = math.atan2(dy, dx)
         angle_err = angle_to_target - self.current_pose_turtle2.theta
-        angle_err = math.atan2(math.sin(angle_err), math.cos(angle_err))  # normalize
+        angle_err = math.atan2(math.sin(angle_err), math.cos(angle_err))
 
         # Gains and limits
         k_lin = 1.5
@@ -81,7 +74,6 @@ class KillerNode(Node):
 
         cmd = Twist()
         if dist < 0.5:
-            # Arrived: stop and eat
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
             self.eat_turtle("turtle1")

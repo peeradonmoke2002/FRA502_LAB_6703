@@ -1,10 +1,4 @@
 #!/usr/bin/python3
-# Subscribe to turtle poses from both /turtle1/pose and /turtle2/pose (turtlesim/Pose) to track the positions of both turtles in real-time.
-# Map default grid interface with 10x10m dimensions that properly interfaces with the turtlesim+ GUI coordinate system for visualization and interaction.
-# Publish odometry data by creating publishers for /odom1 and /odom2 (nav_msgs/Odometry) to provide proper odometry information for both turtle1 and turtle2.
-# Broadcast transforms between the odom frame and individual turtle frames (turtle1 and turtle2) using the TF2 system to maintain proper coordinate frame relationships.
-# Implement odometry publishing function that handles publishing odometry data to /odom1, /odom2, and corresponding /tf transforms for both turtles, following the example structure: def example_pub(self, msg, turtle_name, child_frame_id).
-# RViz2 compatibility by ensuring the node works seamlessly with the provided config fun2.rviz configuration file for proper visualization.
 import rclpy
 from rclpy.node import Node
 from turtlesim.msg import Pose
