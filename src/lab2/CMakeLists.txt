@@ -27,7 +27,6 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install Python executables
 install(PROGRAMS
-  scripts/dummy_script.py
   scripts/eater.py
   scripts/killer.py
   scripts/turtlesim_pose.py
