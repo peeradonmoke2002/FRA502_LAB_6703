@@ -9,21 +9,23 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventH
 def generate_launch_description():
     # Launch arguments for the turtle names
     turtle_eater_name = DeclareLaunchArgument(
-        'turtle_eater_name',
-        default_value='eater',
-        description='Name of the turtle that will be the eater'
+        'eater_name',
+        default_value='eater_turtle',
     )
     
     turtle_killer_name = DeclareLaunchArgument(
-        'turtle_killer_name',
-        default_value='killer',
-        description='Name of the turtle that will be the killer'
+        'killer_name',
+        default_value='killer_turtle',
     )
     
     sampling_frequency_data = DeclareLaunchArgument(
         'sampling_frequency_data',
         default_value='100',
-        description='Sampling frequency for eater node'
+    )
+    
+    max_pizza = DeclareLaunchArgument(
+        'max_pizza',
+        default_value='10',
     )
 
     turtlesim_plus = Node(
@@ -39,7 +41,8 @@ def generate_launch_description():
         executable='eater.py',
         name='eater_node',
         parameters=[{
-            'turtle_eater_name': LaunchConfiguration('turtle_eater_name'),
+            'max_pizza': LaunchConfiguration('max_pizza'),
+            'eater_name': LaunchConfiguration('eater_name'),
             'sampling_frequency': LaunchConfiguration('sampling_frequency_data')
         }],
         output='screen'
@@ -50,8 +53,8 @@ def generate_launch_description():
         executable='killer.py',
         name='killer_node',
         parameters=[{
-            'turtle_eater_name':  LaunchConfiguration('turtle_eater_name'),
-            'turtle_killer_name': LaunchConfiguration('turtle_killer_name'),
+            'eater_name':  LaunchConfiguration('eater_name'),
+            'killer_name': LaunchConfiguration('killer_name'),
             'sampling_frequency': LaunchConfiguration('sampling_frequency_data')
 
         }],
@@ -97,6 +100,7 @@ def generate_launch_description():
 
     ld.add_action(turtle_eater_name)
     ld.add_action(turtle_killer_name)
+    ld.add_action(max_pizza)
     ld.add_action(sampling_frequency_data)
     ld.add_action(turtlesim_plus)
     ld.add_action(spawn_eater)

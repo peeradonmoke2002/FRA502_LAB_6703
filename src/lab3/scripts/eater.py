@@ -16,9 +16,11 @@ class EaterNode(Node):
     def __init__(self):
         super().__init__('eater_node')
         
-        self.declare_parameter('turtle_eater_name', 'eater_dummy')
+        self.declare_parameter('max_pizza', 5)
+        self.declare_parameter('eater_name', 'eater_dummy')
         
-        self.turtle_eater_name = self.get_parameter('turtle_eater_name').value
+        self.turtle_eater_name = self.get_parameter('eater_name').value
+        self.max_pizza = self.get_parameter('max_pizza').value
 
         self.declare_parameter('sampling_frequency', 100)
         self.sampling_frequency = 1 / self.get_parameter('sampling_frequency').value
@@ -38,7 +40,6 @@ class EaterNode(Node):
         self.set_controller_param = self.create_service(SetParam, f'/{self.turtle_eater_name}/set_param', self.set_controller_param_callback)
 
 
-        self.max_pizza = 5
         self.pizza_cnt = 0
         self.target_queue = []
         
@@ -103,7 +104,7 @@ class EaterNode(Node):
     def set_max_pizza_callback(self, request, response):
         if request.max_pizza > 0:
             old_max = self.max_pizza
-            self.max_pizza = request.maxkp_linear_pizza
+            self.max_pizza = request.max_pizza
             if self.max_pizza > old_max and self.pizza_cnt > 0:
                 self.is_eat_all = self.pizza_cnt == self.max_pizza
                 if not self.is_eat_all:

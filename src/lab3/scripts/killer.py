@@ -17,17 +17,17 @@ class KillerNode(Node):
         self.declare_parameter('sampling_frequency', 100)
         self.sampling_frequency = 1 / self.get_parameter('sampling_frequency').value
         
-        self.declare_parameter('turtle_eater_name',  'eater_dummy')
-        self.declare_parameter('turtle_killer_name', 'killer_dummy')
-        self.turtle_eater_name = self.get_parameter('turtle_eater_name').value
-        self.turtle_killer_name = self.get_parameter('turtle_killer_name').value
+        self.declare_parameter('eater_name',  'eater_dummy')
+        self.declare_parameter('killer_name', 'killer_dummy')
+        self.turtle_eater_name = self.get_parameter('eater_name').value
+        self.turtle_killer_name = self.get_parameter('killer_name').value
 
         self.pub_cmdvel = self.create_publisher(Twist, f'/{self.turtle_killer_name}/cmd_vel', 10) 
         self.create_subscription(Pose, f'/{self.turtle_killer_name}/pose', self.pose_callback, 10)
 
         self.create_subscription(Pose, f'/{self.turtle_eater_name}/pose', self.target_callback, 10)
         self.create_subscription(Int64, f'/{self.turtle_eater_name}/pizza_count', self.pizza_count_callback, 10)
-        self.create_subscription(Int64, f'/{self.turtle_eater_name}/set_max_pizza', self.set_max_pizza_callback, 10)
+        # self.create_subscription(Int64, f'/{self.turtle_eater_name}/set_max_pizza', self.set_max_pizza_callback, 10)
         self.set_controller_param = self.create_service(SetParam, f'/{self.turtle_killer_name}/set_param', self.set_controller_param_callback)
         self.create_subscription(Bool, f'/{self.turtle_eater_name}/eat_status', self.eat_status_callback, 10)
 
@@ -39,7 +39,6 @@ class KillerNode(Node):
         self.current_pose = [0.0, 0.0, 0.0]
         self.controller_enable = False
         self.pizza_cnt = 0
-        self.max_pizza = 5
         self.kp_linear = 2.0
         self.kp_angular = 10.0
         self.eat_status = True  
@@ -56,9 +55,9 @@ class KillerNode(Node):
         return response
 
     def target_callback(self, msg: Pose):
-        if self.pizza_cnt == self.max_pizza:
-            self.current_target = [msg.x, msg.y]
-            self.controller_enable = True
+
+        self.current_target = [msg.x, msg.y]
+        self.controller_enable = True
             
     def pose_callback(self, msg: Pose):
         self.current_pose[0] = msg.x
@@ -68,9 +67,6 @@ class KillerNode(Node):
     def pizza_count_callback(self, msg: Int64):
         self.pizza_cnt = msg.data
         
-    def set_max_pizza_callback(self, msg : Int64):
-        self.max_pizza = msg.data
-
     def kill_turtle(self, name : str):
         kill_request = Kill.Request()
         kill_request.name = name
@@ -96,7 +92,6 @@ class KillerNode(Node):
 
             if (abs(dx) < 0.1 and abs(dy) < 0.1):
                 if self.eat_status == True:
-                    self.get_logger().info('Eater is eating, waiting...')
                     self.cmd_vel(0.0, 0.0)
                 else:
                     self.cmd_vel(0.0, 0.0)
@@ -104,7 +99,6 @@ class KillerNode(Node):
                     self.controller_enable = False
             else:
                 if self.eat_status == True:
-                    self.get_logger().info('Eater is eating, waiting...')
                     self.cmd_vel(0.0, 0.0)
                 else:
                     self.cmd_vel(u_dis, u_ori)
