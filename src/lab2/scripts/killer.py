@@ -2,87 +2,80 @@
 
 import rclpy
 from rclpy.node import Node
-import math
-import rclpy
-from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
-from std_msgs.msg import Int64
 from turtlesim.srv import Kill
+from std_srvs.srv import Empty
+from std_msgs.msg import Int64
+import math
+
 
 class KillerNode(Node):
     def __init__(self):
         super().__init__('killer_node')
 
-        self.cmd_pub_2 = self.create_publisher(Twist, '/turtle2/cmd_vel', 10)
-        self.create_subscription(Int64,'/turtle1/pizza_count', self.pizza_count_cb, 10)
-        self.create_subscription(Pose, '/turtle1/pose', self.pose_cb_1, 10)
-        self.create_subscription(Pose, '/turtle2/pose', self.pose_cb_2, 10)
+        self.pub_cmdvel = self.create_publisher(Twist, '/turtle2/cmd_vel', 10) 
+        self.create_subscription(Pose, '/turtle2/pose', self.pose_callback, 10)
 
-        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_cb, 10)
+        self.create_subscription(Pose, '/turtle1/pose', self.target_callback, 10)
+        self.create_subscription(Int64, '/turtle1/pizza_count', self.pizza_count_callback, 10)
+        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_callback, 10)
 
-        self.current_pose_turtle1 = Pose()
-        self.current_pose_turtle2 = Pose()
-        self.pizza_count = Int64()
-        self.max_pizza_count = 20
+        self.eat_pizza_client = self.create_client(Kill, '/remove_turtle')
 
-        self.create_timer(0.05, self.on_timer)
-        
-        self.remove_turtle_client = self.create_client(Kill, '/remove_turtle')
-        while not self.remove_turtle_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for eat service...')
-        
-        
-    def set_max_pizza_cb(self, msg):
-        self.max_pizza_count = msg.data
-        self.get_logger().info(f'Set max pizza to {self.max_pizza_count}')
-        
-        
-    def eat_turtle(self,name):
-        kill_req = Kill.Request()
-        kill_req.name = name
-        self.remove_turtle_client.call_async(kill_req)
-        
-        
-    def pizza_count_cb(self,msg):
-        self.pizza_count = msg
-        
-    def pose_cb_1(self, msg):
-        self.current_pose_turtle1 = msg
-        
-    def pose_cb_2(self, msg):
-        self.current_pose_turtle2 = msg
-        
-        
-    def on_timer(self):
-        if self.pizza_count.data < self.max_pizza_count:
-            return
+        self.timer = self.create_timer(0.01, self.timer_callback)
 
-        target = self.current_pose_turtle1
-        dx = target.x - self.current_pose_turtle2.x
-        dy = target.y - self.current_pose_turtle2.y
-        dist = math.hypot(dx, dy)
-        angle_to_target = math.atan2(dy, dx)
-        angle_err = angle_to_target - self.current_pose_turtle2.theta
-        angle_err = math.atan2(math.sin(angle_err), math.cos(angle_err))
+        self.current_target = None
+        self.current_pose = [0.0, 0.0, 0.0]
+        self.controller_enable = False
+        self.pizza_cnt = 0
+        self.max_pizza = 20
 
-        # Gains and limits
-        k_lin = 1.5
-        k_ang = 4.0
-        max_lin = 2.0
-        max_ang = 2.0
+    def target_callback(self, msg: Pose):
+        if self.pizza_cnt == self.max_pizza:
+            self.current_target = [msg.x, msg.y]
+            self.controller_enable = True
 
-        cmd = Twist()
-        if dist < 0.5:
-            cmd.linear.x = 0.0
-            cmd.angular.z = 0.0
-            self.eat_turtle("turtle1")
-            self.cmd_pub_2.publish(cmd)
+    def pose_callback(self, msg: Pose):
+        self.current_pose[0] = msg.x
+        self.current_pose[1] = msg.y
+        self.current_pose[2] = msg.theta
 
-        else:
-            cmd.linear.x = min(k_lin * dist, max_lin)
-            cmd.angular.z = max(-max_ang, min(k_ang * angle_err, max_ang))
-            self.cmd_pub_2.publish(cmd)
+    def pizza_count_callback(self, msg: Int64):
+        self.pizza_cnt = msg.data
+
+    def set_max_pizza_callback(self, msg : Int64):
+        self.max_pizza = msg.data
+
+    def kill_turtle(self, name : str):
+        kill_request = Kill.Request()
+        kill_request.name = name
+        self.eat_pizza_client.call_async(kill_request)
+
+    def cmd_vel(self, vx, w):
+        cmd_vel = Twist()
+        cmd_vel.linear.x = vx
+        cmd_vel.angular.z = w
+        self.pub_cmdvel.publish(cmd_vel)
+
+    def timer_callback(self):
+        if self.controller_enable:
+            dx = self.current_target[0] - self.current_pose[0]
+            dy = self.current_target[1] - self.current_pose[1]
+
+            e_dis = math.hypot(dx, dy)
+            e_ori = math.atan2(dy, dx) - self.current_pose[2]
+            e_ori = math.atan2(math.sin(e_ori), math.cos(e_ori))
+
+            u_dis = 2 * e_dis
+            u_ori = 10 * e_ori
+
+            if (abs(dx) < 0.1 and abs(dy) < 0.1):
+                self.cmd_vel(0.0, 0.0)
+                self.kill_turtle('turtle1')
+                self.controller_enable = False
+            else:
+                self.cmd_vel(u_dis, u_ori)
 
 def main(args=None):
     rclpy.init(args=args)

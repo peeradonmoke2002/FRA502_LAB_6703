@@ -25,7 +25,7 @@ class TurtlesimPoseNode(Node):
 
 
         # Control loop timer
-        self.create_timer(0.05, self.on_timer)
+        self.create_timer(0.01, self.timer_callback)
         
     def pose_cb_1(self, msg):
         self.turtle1 = msg
@@ -35,12 +35,14 @@ class TurtlesimPoseNode(Node):
 
         
     def tf_odom_pub(self, msg, odom_pub, child_frame_id):
+        offset_x = 5.40
+        offset_y = 5.38
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
         odom_msg.header.frame_id = 'odom'
         odom_msg.child_frame_id = child_frame_id
-        odom_msg.pose.pose.position.x = msg.x
-        odom_msg.pose.pose.position.y = msg.y
+        odom_msg.pose.pose.position.x = msg.x - offset_x
+        odom_msg.pose.pose.position.y = msg.y - offset_y
         odom_msg.pose.pose.position.z = 0.0
         q = tf.quaternion_from_euler(0, 0, msg.theta)
         odom_msg.pose.pose.orientation.x = q[0]
@@ -63,7 +65,7 @@ class TurtlesimPoseNode(Node):
         self.tf_broadcaster.sendTransform(t)
     
         
-    def on_timer(self):
+    def timer_callback(self):
         self.tf_odom_pub(self.turtle1, self.odom_pub_1, self.turtlename1)
         self.tf_odom_pub(self.turtle2, self.odom_pub_2, self.turtlename2)
 

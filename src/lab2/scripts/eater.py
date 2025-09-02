@@ -1,151 +1,118 @@
 #!/usr/bin/python3
 
-import math
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, PoseStamped
 from turtlesim.msg import Pose
-from std_srvs.srv import Empty
 from turtlesim_plus_interfaces.srv import GivePosition
+from std_srvs.srv import Empty
 from std_msgs.msg import Int64
-from geometry_msgs.msg import PoseStamped
+import math
+
 
 class EaterNode(Node):
     def __init__(self):
         super().__init__('eater_node')
 
-        self.cmd_pub = self.create_publisher(Twist, '/turtle1/cmd_vel', 10)
+        self.pub_cmdvel = self.create_publisher(Twist, '/turtle1/cmd_vel', 10) 
+        self.create_subscription(Pose, '/turtle1/pose', self.pose_callback, 10)
+        self.create_subscription(Int64, '/turtle1/pizza_count', self.eat_pizza_count_callback, 10)
 
-        self.create_subscription(Pose, '/turtle1/pose', self.pose_cb, 10)
-        self.create_subscription(Point, '/mouse_position', self.mouse_pos_cb, 10)
-        self.create_subscription(Int64,'/turtle1/pizza_count', self.pizza_count_cb, 10)
-        self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose, 10)
+        self.create_subscription(Point, '/mouse_position', self.mouse_position_callback, 10)
+        self.create_subscription(PoseStamped, '/goal_pose', self.rviz_position_callback, 10)
+        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_callback, 10)
 
+        self.spawn_pizza_client = self.create_client(GivePosition, '/spawn_pizza')
+        self.eat_pizza_client = self.create_client(Empty, '/turtle1/eat')
 
-        self.current_pose = Pose()
-        self.target = []
-        self.last_spawn = None
-        self.pizza_count = Int64()
-        self.spawn_requests_count = 0
-        self.max_pizza_count = 20
-        
-        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_cb, 10)
+        self.timer = self.create_timer(0.01, self.timer_callback)
 
-        self.create_timer(0.05, self.on_timer)
+        self.max_pizza = 20
+        self.pizza_cnt = 0
+        self.target_queue = []
 
-        self.spawn_client = self.create_client(GivePosition, 'spawn_pizza')
-        while not self.spawn_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for spawn_pizza service...')
-       
-        self.eat_client = self.create_client(Empty, '/turtle1/eat')
-        while not self.eat_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for eat service...')
+        self.current_target = None
+        self.current_pose = [0.0, 0.0, 0.0]
+        self.controller_enable = False
+        self.is_eat_all = False
 
-    def pizza_count_cb(self, msg):
-        self.pizza_count = msg
+    def spawn_pizza(self, position):
+        position_request = GivePosition.Request()
+        position_request.x = position[0]
+        position_request.y = position[1]
+        self.spawn_pizza_client.call_async(position_request)
 
-        if self.spawn_requests_count < msg.data:
-            self.spawn_requests_count = msg.data
-
-        
-    def set_max_pizza_cb(self, msg):
-        self.max_pizza_count = msg.data
-        self.get_logger().info(f'Set max pizza to {self.max_pizza_count}')
-        
     def eat_pizza(self):
-        eat_req = Empty.Request()
-        self.eat_client.call_async(eat_req)
-        
-    def spawn_pizza(self,x,y):
+        eat_request = Empty.Request()
+        self.eat_pizza_client.call_async(eat_request)
 
-        if self.spawn_requests_count >= self.max_pizza_count:
-            self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
-            return
-        
+    def eat_pizza_count_callback(self, msg: Int64):
+        self.is_eat_all = msg.data == self.max_pizza
 
-        self.spawn_requests_count += 1
-        
-        spawn_req = GivePosition.Request()
-        spawn_req.x = x
-        spawn_req.y = y
-        self.spawn_client.call_async(spawn_req)
-        
-    def mouse_pos_cb(self, msg: Point):
-        pos = (round(msg.x, 2), round(msg.y, 2))
-        if self.last_spawn != pos:
-      
-            if self.spawn_requests_count >= self.max_pizza_count:
-                self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
+    def cmd_vel(self, vx, w):
+        cmd_vel = Twist()
+        cmd_vel.linear.x = vx
+        cmd_vel.angular.z = w
+        self.pub_cmdvel.publish(cmd_vel)
+
+    def mouse_position_callback(self, msg: Point):
+        point = [msg.x, msg.y]
+        if self.pizza_cnt < self.max_pizza:
+            self.target_queue.append(point)
+            self.pizza_cnt += 1
+            self.spawn_pizza(point)
+        elif self.is_eat_all:
+            self.target_queue.append(point)
+            self.controller_enable = False
+            while len(self.target_queue) > 1:
+                self.target_queue.pop(0)
+        self.get_logger().info(f'Mouse Position: x={msg.x}, y={msg.y}')
+
+    def rviz_position_callback(self, msg: PoseStamped):
+        point = [msg.pose.position.x + 5.40, msg.pose.position.y + 5.38]
+        if self.pizza_cnt < self.max_pizza:
+            self.target_queue.append(point)
+            self.pizza_cnt += 1
+            self.spawn_pizza(point)
+        elif self.is_eat_all:
+            self.target_queue.append(point)
+            self.controller_enable = False
+            while len(self.target_queue) > 1:
+                self.target_queue.pop(0)
+        self.get_logger().info(f'RViz Goal Position: x={msg.pose.position.x + 5.40}, y={msg.pose.position.y + 5.38}')
+
+    def set_max_pizza_callback(self, msg : Int64):
+        self.max_pizza = msg.data
+        self.get_logger().info(f'Set max pizza to {self.max_pizza}')
+
+    def pose_callback(self, msg: Pose):
+        self.current_pose[0] = msg.x
+        self.current_pose[1] = msg.y
+        self.current_pose[2] = msg.theta
+
+    def timer_callback(self):
+        if len(self.target_queue) > 0 and not self.controller_enable:
+            self.current_target = self.target_queue.pop(0)
+            self.controller_enable = True
+
+        if self.controller_enable:
+            dx = self.current_target[0] - self.current_pose[0]
+            dy = self.current_target[1] - self.current_pose[1]
+
+            e_dis = math.hypot(dx, dy)
+            e_ori = math.atan2(dy, dx) - self.current_pose[2]
+            e_ori = math.atan2(math.sin(e_ori), math.cos(e_ori))
+
+            u_dis = 2 * e_dis
+            u_ori = 10 * e_ori
+
+            if (abs(dx) < 0.1 and abs(dy) < 0.1):
+                self.cmd_vel(0.0, 0.0)
+                if not self.is_eat_all:
+                    self.eat_pizza()
+                self.controller_enable = False
             else:
-                self.spawn_pizza(msg.x, msg.y)
-                
-
-            if not hasattr(self, 'targets'):
-                self.targets = []
-            self.targets.append(msg)
-            self.last_spawn = pos
-            
-    def goal_pose(self, msg: PoseStamped):
-
-        self.get_logger().info(f"Received goal_pose: x={msg.pose.position.x}, y={msg.pose.position.y}")
-        pos = (round(msg.pose.position.x, 2), round(msg.pose.position.y, 2))
-        if self.last_spawn != pos:
-
-            if self.spawn_requests_count >= self.max_pizza_count:
-                self.get_logger().info(f'Pizza limit ({self.max_pizza_count}) reached; not spawning new pizza.')
-            else:
-                self.spawn_pizza(msg.pose.position.x, msg.pose.position.y)
-                
-            if not hasattr(self, 'targets'):
-                self.targets = []
-
-            point = Point()
-            point.x = msg.pose.position.x
-            point.y = msg.pose.position.y
-            point.z = msg.pose.position.z
-            self.targets.append(point)
-            self.last_spawn = pos
-            
-
-    def pose_cb(self, msg: Pose):
-        self.current_pose = msg
-
-    def on_timer(self):
-        if not hasattr(self, 'targets') or not self.targets:
-            return
-
-        target = self.targets[0]
-        dx = target.x - self.current_pose.x
-        dy = target.y - self.current_pose.y
-        dist = math.hypot(dx, dy)
-        angle_to_target = math.atan2(dy, dx)
-        angle_err = angle_to_target - self.current_pose.theta
-        angle_err = math.atan2(math.sin(angle_err), math.cos(angle_err)) 
-
-        k_lin = 1.5
-        k_ang = 4.0
-        max_lin = 2.0
-        max_ang = 2.0
-
-        cmd = Twist()
-        if dist < 0.5:
-            cmd.linear.x = 0.0
-            cmd.angular.z = 0.0
-            
-            if self.pizza_count.data <= self.max_pizza_count:
-                self.get_logger().info('Arrived at pizza; eating!')
-                self.eat_pizza()
-            else:
-                self.get_logger().info(f'Arrived at position; pizza limit ({self.max_pizza_count}) reached.')
-                
-            self.targets.pop(0)
-            self.cmd_pub.publish(cmd)
-
-        else:
-            cmd.linear.x = min(k_lin * dist, max_lin)
-            cmd.angular.z = max(-max_ang, min(k_ang * angle_err, max_ang))
-            self.cmd_pub.publish(cmd)
-
+                self.cmd_vel(u_dis, u_ori)
 
 def main(args=None):
     rclpy.init(args=args)
