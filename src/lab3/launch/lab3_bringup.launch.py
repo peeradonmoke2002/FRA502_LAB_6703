@@ -73,7 +73,7 @@ def generate_launch_description():
             '/spawn_turtle ',                              
             'turtlesim/srv/Spawn ',                        
             '"{x: 0.1, y: 0.1, theta: 0.0, name: \\"',
-            LaunchConfiguration('turtle_eater_name'),
+            LaunchConfiguration('eater_name'),
             '\\"}"'
         ]],
         shell=True,
@@ -86,7 +86,7 @@ def generate_launch_description():
             '/spawn_turtle ',
             'turtlesim/srv/Spawn ',
             '"{x: 0.1, y: 0.1, theta: 0.0, name: \\"',
-            LaunchConfiguration('turtle_killer_name'),
+            LaunchConfiguration('killer_name'),
             '\\"}"'
         ]],
         shell=True,
