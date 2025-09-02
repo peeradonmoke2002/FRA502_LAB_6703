@@ -3,25 +3,14 @@ Peeradon Ruengkaew 6703 (Moke)
 
 ## Table of Contents
 
-- [System Architecture](#system-architecture)
-- [Demo Video](#demo-video)
 - [Installation](#insallation)
-- [Run the nodes](#run-the-nodes)
-- [Usage](#usage)
-
-## System Architecture
-
-![system_architecture](./images/system_architecture.png)
-
-## Demo Video
-
-[demove_video](./images/output.mp4)
+- [Run the launch file](#run-the-launch-file)
 
 ## Insallation
 
 1. Clone LAB repository at barch LAB2
    ```bash
-   git clone https://github.com/peeradonmoke2002/FRA502_LAB_6703.git -b LAB2
+   git clone https://github.com/peeradonmoke2002/FRA502_LAB_6703.git -b LAB3
    ```
    cd into the workspace
    ```bash
@@ -68,46 +57,8 @@ Peeradon Ruengkaew 6703 (Moke)
     ```
 
 
-## Run the nodes
-1. Open a terminal and run the turtlesim node
-   ```bash
-   ros2 run turtlesim_plus turtlesim_plus_node.py
-    ```
+## Run the launch file
 
-2. Spawn second turtle (turtle2)
-   ```bash
-   ros2 service call /spawn_turtle turtlesim/srv/Spawn "x: 0.0
-   y: 0.0
-   theta: 0.0
-   name: 'turtle2'" 
-   ```
-
-3. Open a new terminal and run the eater node
-    ```bash
-    ros2 run lab2 eater.py
-    ```
-4. Open a new terminal and run the killer node
-    ```bash
-    ros2 run lab2 killer.py
-    ```
-5. Open a new terminal and run the turtlesim_pose node
-    ```bash
-    ros2 run lab2 turtlesim_pose.py
-    ```
-6. Open a new terminal and run RViz2 with the provided configuration file
-
-    ```bash
-    cd ~/FRA502_LAB_6703
-    rviz2 -d src/lab2.rviz
-    ```
-7. Open a new terminal and set max pizza from topic `/set_max_pizza`
-   ```bash
-   ros2 topic pub -r 100 /set_max_pizza std_msgs/msg/Int64 "data: 20"
-   ```
-
-## Usage
-
-1. In the turtlesim window, you will see two turtles: turtle1 (the eater) and turtle2 (the killer).
-2. The eater turtle (turtle1) will move around the screen and "eat" base from your clicks on gui and set goal pose in rviz2. It will eat maximum base from topic set max pizza and pizza will not spawn and count however the function click and set goal to move is still work.
-3. After turtle1 has eaten 20 pizzas, turtle2 (the killer) will start chasing turtle1. So try to click or set goal pose to move turtle1 to avoid being caught by turtle2.
-4. Can see all action in rviz2
+```bash
+ros2 launch lab3 lab3_bringup.launch.py 
+```
