@@ -17,9 +17,9 @@ class EaterNode(Node):
         super().__init__('eater_node')
         
         self.declare_parameter('max_pizza', 5)
-        self.declare_parameter('eater_name', 'eater_dummy')
+        self.declare_parameter('turtle_eater_name', 'eater_dummy')
         
-        self.turtle_eater_name = self.get_parameter('eater_name').value
+        self.turtle_eater_name = self.get_parameter('turtle_eater_name').value
         self.max_pizza = self.get_parameter('max_pizza').value
 
         self.declare_parameter('sampling_frequency', 100)

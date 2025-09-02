@@ -17,10 +17,10 @@ class KillerNode(Node):
         self.declare_parameter('sampling_frequency', 100)
         self.sampling_frequency = 1 / self.get_parameter('sampling_frequency').value
         
-        self.declare_parameter('eater_name',  'eater_dummy')
-        self.declare_parameter('killer_name', 'killer_dummy')
-        self.turtle_eater_name = self.get_parameter('eater_name').value
-        self.turtle_killer_name = self.get_parameter('killer_name').value
+        self.declare_parameter('turtle_eater_name',  'eater_dummy')
+        self.declare_parameter('turtle_killer_name', 'killer_dummy')
+        self.turtle_eater_name = self.get_parameter('turtle_eater_name').value
+        self.turtle_killer_name = self.get_parameter('turtle_killer_name').value
 
         self.pub_cmdvel = self.create_publisher(Twist, f'/{self.turtle_killer_name}/cmd_vel', 10) 
         self.create_subscription(Pose, f'/{self.turtle_killer_name}/pose', self.pose_callback, 10)

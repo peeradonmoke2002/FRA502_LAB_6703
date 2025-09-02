@@ -9,15 +9,16 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventH
 def generate_launch_description():
     # Launch arguments for the turtle names
     turtle_eater_name = DeclareLaunchArgument(
-        'eater_name',
+        'turtle_eater_name',
         default_value='eater_turtle',
     )
     
     turtle_killer_name = DeclareLaunchArgument(
-        'killer_name',
+        'turtle_killer_name',
         default_value='killer_turtle',
     )
     
+
     sampling_frequency_data = DeclareLaunchArgument(
         'sampling_frequency_data',
         default_value='100',
@@ -42,7 +43,7 @@ def generate_launch_description():
         name='eater_node',
         parameters=[{
             'max_pizza': LaunchConfiguration('max_pizza'),
-            'eater_name': LaunchConfiguration('eater_name'),
+            'turtle_eater_name': LaunchConfiguration('turtle_eater_name'),
             'sampling_frequency': LaunchConfiguration('sampling_frequency_data')
         }],
         output='screen'
@@ -53,8 +54,8 @@ def generate_launch_description():
         executable='killer.py',
         name='killer_node',
         parameters=[{
-            'eater_name':  LaunchConfiguration('eater_name'),
-            'killer_name': LaunchConfiguration('killer_name'),
+            'turtle_eater_name':  LaunchConfiguration('turtle_eater_name'),
+            'turtle_killer_name': LaunchConfiguration('turtle_killer_name'),
             'sampling_frequency': LaunchConfiguration('sampling_frequency_data')
 
         }],
@@ -73,7 +74,7 @@ def generate_launch_description():
             '/spawn_turtle ',                              
             'turtlesim/srv/Spawn ',                        
             '"{x: 0.1, y: 0.1, theta: 0.0, name: \\"',
-            LaunchConfiguration('eater_name'),
+            LaunchConfiguration('turtle_eater_name'),
             '\\"}"'
         ]],
         shell=True,
@@ -86,7 +87,7 @@ def generate_launch_description():
             '/spawn_turtle ',
             'turtlesim/srv/Spawn ',
             '"{x: 0.1, y: 0.1, theta: 0.0, name: \\"',
-            LaunchConfiguration('killer_name'),
+            LaunchConfiguration('turtle_killer_name'),
             '\\"}"'
         ]],
         shell=True,
