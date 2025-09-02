@@ -102,26 +102,19 @@ class EaterNode(Node):
         self.get_logger().info(f'Mouse Position: x={msg.x}, y={msg.y}')
 
     def set_max_pizza_callback(self, request, response):
-        new_max = request.max_pizza
-
-        if new_max <= 0:
-            self.get_logger().warn(f'Invalid max_pizza: {new_max}')
-            response.log = 'failed'
-            return response
-
-        if new_max < self.pizza_cnt:
-            self.get_logger().warn(
-                f'Cannot set max_pizza({new_max}) < current eaten({self.pizza_cnt})'
-            )
-            response.log = 'failed'
-            return response
-
-        self.max_pizza = new_max
-        self.is_eat_all = (self.pizza_cnt >= self.max_pizza)
-        self.publish_eat_status(not self.is_eat_all)
-
-        response.log = 'success'
-        return response
+        if request.max_pizza > 0:
+            old_max = self.max_pizza
+            self.max_pizza = request.max_pizza
+            if self.max_pizza > old_max and self.pizza_cnt > 0:
+                self.is_eat_all = self.pizza_cnt == self.max_pizza
+                if not self.is_eat_all:
+                    self.publish_eat_status(True)
+                    
+            response.log = f'success'
+        else:
+            self.get_logger().info(f'Failed to set max pizza to {request.max_pizza} (current max: {self.max_pizza})')
+            response.log = f'failed'
+        return response 
     
     def set_controller_param_callback(self, request, response):
         self.kp_linear = request.kp_linear
