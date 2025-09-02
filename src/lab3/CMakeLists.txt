@@ -29,7 +29,6 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/eater.py
   scripts/killer.py
-  scripts/turtlesim_pose.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -50,6 +49,7 @@ install(TARGETS
 ################ INSTALL LAUNCH, ETC #################
 install(DIRECTORY
   # add directories here
+  launch
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()

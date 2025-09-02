@@ -6,36 +6,60 @@ from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 from turtlesim.srv import Kill
 from std_srvs.srv import Empty
-from std_msgs.msg import Int64
+from std_msgs.msg import Int64, Bool
+from controller_interfaces.srv import SetParam
 import math
 
 
 class KillerNode(Node):
     def __init__(self):
         super().__init__('killer_node')
+        self.declare_parameter('sampling_frequency', 100)
+        self.sampling_frequency = 1 / self.get_parameter('sampling_frequency').value
+        
+        self.declare_parameter('turtle_eater_name',  'eater_dummy')
+        self.declare_parameter('turtle_killer_name', 'killer_dummy')
+        self.turtle_eater_name = self.get_parameter('turtle_eater_name').value
+        self.turtle_killer_name = self.get_parameter('turtle_killer_name').value
 
-        self.pub_cmdvel = self.create_publisher(Twist, '/turtle2/cmd_vel', 10) 
-        self.create_subscription(Pose, '/turtle2/pose', self.pose_callback, 10)
+        self.pub_cmdvel = self.create_publisher(Twist, f'/{self.turtle_killer_name}/cmd_vel', 10) 
+        self.create_subscription(Pose, f'/{self.turtle_killer_name}/pose', self.pose_callback, 10)
 
-        self.create_subscription(Pose, '/turtle1/pose', self.target_callback, 10)
-        self.create_subscription(Int64, '/turtle1/pizza_count', self.pizza_count_callback, 10)
-        self.create_subscription(Int64, '/set_max_pizza', self.set_max_pizza_callback, 10)
+        self.create_subscription(Pose, f'/{self.turtle_eater_name}/pose', self.target_callback, 10)
+        self.create_subscription(Int64, f'/{self.turtle_eater_name}/pizza_count', self.pizza_count_callback, 10)
+        self.create_subscription(Int64, f'/{self.turtle_eater_name}/set_max_pizza', self.set_max_pizza_callback, 10)
+        self.set_controller_param = self.create_service(SetParam, f'/{self.turtle_killer_name}/set_param', self.set_controller_param_callback)
+        self.create_subscription(Bool, f'/{self.turtle_eater_name}/eat_status', self.eat_status_callback, 10)
 
         self.eat_pizza_client = self.create_client(Kill, '/remove_turtle')
 
-        self.timer = self.create_timer(0.01, self.timer_callback)
+        self.timer = self.create_timer(self.sampling_frequency, self.timer_callback)
 
         self.current_target = None
         self.current_pose = [0.0, 0.0, 0.0]
         self.controller_enable = False
         self.pizza_cnt = 0
-        self.max_pizza = 20
+        self.max_pizza = 5
+        self.kp_linear = 2.0
+        self.kp_angular = 10.0
+        self.eat_status = True  
+ 
+        
+    def eat_status_callback(self, msg: Bool):
+        self.eat_status = msg.data
+
+            
+    def set_controller_param_callback(self, request, response):
+        self.kp_linear = request.kp_linear
+        self.kp_angular = request.kp_angular
+        self.get_logger().info(f'Set controller params: linear_gain={self.kp_linear}, angular_gain={self.kp_angular}')
+        return response
 
     def target_callback(self, msg: Pose):
         if self.pizza_cnt == self.max_pizza:
             self.current_target = [msg.x, msg.y]
             self.controller_enable = True
-
+            
     def pose_callback(self, msg: Pose):
         self.current_pose[0] = msg.x
         self.current_pose[1] = msg.y
@@ -43,7 +67,7 @@ class KillerNode(Node):
 
     def pizza_count_callback(self, msg: Int64):
         self.pizza_cnt = msg.data
-
+        
     def set_max_pizza_callback(self, msg : Int64):
         self.max_pizza = msg.data
 
@@ -67,15 +91,23 @@ class KillerNode(Node):
             e_ori = math.atan2(dy, dx) - self.current_pose[2]
             e_ori = math.atan2(math.sin(e_ori), math.cos(e_ori))
 
-            u_dis = 2 * e_dis
-            u_ori = 10 * e_ori
+            u_dis = self.kp_linear * e_dis
+            u_ori = self.kp_linear * e_ori
 
             if (abs(dx) < 0.1 and abs(dy) < 0.1):
-                self.cmd_vel(0.0, 0.0)
-                self.kill_turtle('turtle1')
-                self.controller_enable = False
+                if self.eat_status == True:
+                    self.get_logger().info('Eater is eating, waiting...')
+                    self.cmd_vel(0.0, 0.0)
+                else:
+                    self.cmd_vel(0.0, 0.0)
+                    self.kill_turtle(self.turtle_eater_name)
+                    self.controller_enable = False
             else:
-                self.cmd_vel(u_dis, u_ori)
+                if self.eat_status == True:
+                    self.get_logger().info('Eater is eating, waiting...')
+                    self.cmd_vel(0.0, 0.0)
+                else:
+                    self.cmd_vel(u_dis, u_ori)
 
 def main(args=None):
     rclpy.init(args=args)
