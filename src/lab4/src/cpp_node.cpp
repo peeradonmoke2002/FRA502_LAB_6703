@@ -1,4 +1,4 @@
-#include "lab2/cpp_header.hpp"
+#include "lab4/cpp_header.hpp"
 
 #include <iostream>
 

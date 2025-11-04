@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lab2)
+project(lab4)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -27,9 +27,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install Python executables
 install(PROGRAMS
-  scripts/eater.py
-  scripts/killer.py
-  scripts/turtlesim_pose.py
+  scripts/dummy_script.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
