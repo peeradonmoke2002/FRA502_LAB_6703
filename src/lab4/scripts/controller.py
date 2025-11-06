@@ -23,6 +23,14 @@ class ControllerNode(Node):
     def __init__(self):
         super().__init__('controller_node')
         self.robot = RRRRobot()
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        # Define the frames for transform lookup
+        self.source_frame = 'link_0'  # Base frame
+        self.target_frame = 'end_effector'  # End effector frame
+
+        self.create_subscription(JointState, "joint_states", self.joint_state_callback, 10)
         self.create_subscription(Twist, "cmd_vel", self.cmd_vel_callback, 10)
 
     def cmd_vel_callback(self, msg):
@@ -30,7 +38,50 @@ class ControllerNode(Node):
         vy = msg.linear.y
         vz = msg.linear.z
 
-        self.get_logger().info(f"Received cmd_vel: vx={vx}, vy={vy}, vz={vz}")
+        # self.get_logger().info(f"Received cmd_vel: vx={vx}, vy={vy}, vz={vz}")
+
+    def joint_state_callback(self, msg):
+        joint_positions = msg.position
+        self.robot.qz = np.array(joint_positions)
+        # verify by logging
+        self.get_logger().info(f"Received joint states: {self.robot.qz}")
+
+        # Get transform once and use the result
+        position, rotation = self.get_transform()
+        if position is not None:
+            self.get_logger().info(f"End Effector Position: {position}")
+            self.get_logger().info(f"End Effector Rotation Matrix:\n{rotation}")
+
+
+    def get_transform(self):
+        # Get the latest available transform
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.source_frame, 
+                self.target_frame, 
+                rclpy.time.Time()  # Use Time() for latest available transform
+            )
+        except Exception as e:
+            self.get_logger().error(f"Transform lookup failed: {e}")
+            return None, None
+        
+        position = transform.transform.translation
+        orientation = transform.transform.rotation
+        
+        x = position.x
+        y = position.y
+        z = position.z
+        
+        # Extract quaternion components
+        qx = orientation.x
+        qy = orientation.y
+        qz = orientation.z
+        qw = orientation.w
+
+        rotation = R.from_quat([qx, qy, qz, qw])  # scipy expects [x, y, z, w]
+        rotation_matrix = rotation.as_matrix()  # Get 3x3 rotation matrix
+
+        return np.array([x, y, z]), rotation_matrix
 
 def main(args=None):
     rclpy.init(args=args)

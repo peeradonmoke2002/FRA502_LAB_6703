@@ -40,6 +40,11 @@ def generate_launch_description():
             }
         }]
     )
+
+    joint_state_gui = Node(
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui',
+    )
     # Start RViz
     rviz = Node(
         package="rviz2",
@@ -53,6 +58,7 @@ def generate_launch_description():
     # Add launch actions
     launch_description.add_action(rviz)
     launch_description.add_action(rsp)
-    launch_description.add_action(joint_state_publisher)
+    # launch_description.add_action(joint_state_publisher)
+    launch_description.add_action(joint_state_gui)
 
     return launch_description
