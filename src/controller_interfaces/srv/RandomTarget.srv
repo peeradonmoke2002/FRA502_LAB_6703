@@ -2,6 +2,8 @@
 
 # Request
 bool request_new_target                # Request a new random target
+bool target_reached                    # True when the controller reports the previous goal complete
+geometry_msgs/Point current_position   # Current end-effector position (optional, used when reporting)
 
 ---
 

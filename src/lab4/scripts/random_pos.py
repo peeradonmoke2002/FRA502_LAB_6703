@@ -33,6 +33,14 @@ class RandomPoseNode(Node):
         self.r_min = 0.10  # Minimum reach (conservative estimate)
         self.l = 0.2  # L1 offset (joint_1 height)
 
+        # Pre-computed safe poses used when random sampling fails
+        self.safe_fallbacks = [
+            np.array([0.30, 0.00, 0.45]),
+            np.array([0.25, 0.18, 0.40]),
+            np.array([0.25, -0.18, 0.40]),
+            np.array([0.15, 0.00, 0.55]),
+        ]
+
         # Debug: Print workspace info
         self.get_logger().info(f"Robot has {self.robot.n} joints")
         self.get_logger().info(f"Joint limits: {self.robot.qlim}")
@@ -83,14 +91,15 @@ class RandomPoseNode(Node):
             T_target = SE3(x, y, z) @ SE3.Rx(np.pi/2)
 
             # Solve IK using Levenberg-Marquardt method - constrain position only
-            sol = self.robot.ikine_LM(T_target, mask=[1, 1, 1, 0, 0, 0] ,limits=False)
+            # Enable joint limits to ensure physically valid solutions
+            sol = self.robot.ikine_LM(T_target, mask=[1, 1, 1, 0, 0, 0])
 
             # Check if solution is valid
             if sol.success:
                 return sol.q  # Return joint angles
             else:
                 # Try with different seed
-                sol = self.robot.ikine_LM(T_target, q0=np.zeros(self.robot.n), mask=[1, 1, 1, 0, 0, 0],limits=False)
+                sol = self.robot.ikine_LM(T_target, q0=np.zeros(self.robot.n), mask=[1, 1, 1, 0, 0, 0])
                 if sol.success:
                     return sol.q
                 return None
@@ -99,24 +108,41 @@ class RandomPoseNode(Node):
 
     def random_target_callback(self, request, response):
         """Service callback for generating random targets in Auto Mode"""
-
+        if request.target_reached:
+            self.get_logger().info(
+                "Auto Mode reports last target reached at "
+                f"[{request.current_position.x:.3f}, {request.current_position.y:.3f}, {request.current_position.z:.3f}]"
+            )
 
         if request.request_new_target:
-            position, q_solution = self.generate_random_pose()
+            result = self.generate_random_pose()
 
+            if result is None:
+                # Failed to generate valid target
+                response.success = False
+                response.target_position.x = 0.0
+                response.target_position.y = 0.0
+                response.target_position.z = 0.0
+                response.message = "Failed to generate valid random target after all attempts"
+                self.get_logger().error(response.message)
+                return response
+
+            position, q_solution = result
             response.success = True
             response.target_position.x = float(position[0])
             response.target_position.y = float(position[1])
             response.target_position.z = float(position[2])
-            response.message = f"Generated random target: [{position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}]"
+            response.message = (
+                f"Generated random target: [{position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}]"
+            )
             self.publish_target(position, q_solution)
             self.get_logger().info(response.message)
         else:
-            response.success = False
-            response.target_position.x = 0.0
-            response.target_position.y = 0.0
-            response.target_position.z = 0.0
-            response.message = "No target requested"
+            response.success = True
+            response.target_position.x = float(request.current_position.x)
+            response.target_position.y = float(request.current_position.y)
+            response.target_position.z = float(request.current_position.z)
+            response.message = "Acknowledged target completion without requesting a new pose"
 
         return response
 
@@ -131,9 +157,10 @@ class RandomPoseNode(Node):
 
         while attempts < max_attempts:
             # Generate random x, y, z within cubic bounds
+            # Z should be centered around L1 (base height) with range ± r_max
             x = random.uniform(-self.r_max, self.r_max)
             y = random.uniform(-self.r_max, self.r_max)
-            z = random.uniform(-self.r_max, self.r_max)
+            z = random.uniform(self.l - self.r_max, self.l + self.r_max)
 
             # Check if point is within spherical shell
             # Distance from origin, accounting for L1 offset in z
@@ -145,17 +172,45 @@ class RandomPoseNode(Node):
                 goal = self.inverse_kinematic(x, y, z)
 
                 if goal is not None:
-                    # IK succeeded! Return this pose and the solution
-                    self.get_logger().info(f"Valid pose found after {attempts + 1} attempts")
-                    return np.array([x, y, z]), goal
+                    # Check if solution is near singularity
+                    J = self.robot.jacob0(goal)
+                    J_pos = J[:3, :]  # Position part only
+                    condJ = np.linalg.cond(J_pos)
+
+                    if condJ < 1e3:
+                        # IK succeeded and not near singularity!
+                        self.get_logger().info(f"Valid pose found after {attempts + 1} attempts (cond={condJ:.2e})")
+                        return np.array([x, y, z]), goal
+                    else:
+                        # Target is near singularity, skip it
+                        self.get_logger().debug(f"Target rejected: near singularity (cond={condJ:.2e})")
 
             attempts += 1
 
-        # If all safe positions fail, return current robot position
-        self.get_logger().error("All fallback positions failed, using current position")
-        T_current = self.robot.fkine(self.robot.qz)
-        current_pos = T_current.t
-        return current_pos, self.robot.qz
+        fallback = self.get_fallback_pose()
+        if fallback is not None:
+            self.get_logger().warn("Random sampling failed; using deterministic fallback pose")
+            return fallback
+
+        # If all strategies fail, return None to signal complete failure
+        self.get_logger().error("All fallback positions failed - cannot generate valid target")
+        return None
+
+    def get_fallback_pose(self):
+        """Iterate through deterministic poses to find a guaranteed reachable target"""
+        for pose in self.safe_fallbacks:
+            solution = self.inverse_kinematic(pose[0], pose[1], pose[2])
+            if solution is not None:
+                # Check if fallback is also not near singularity
+                J = self.robot.jacob0(solution)
+                J_pos = J[:3, :]
+                condJ = np.linalg.cond(J_pos)
+
+                if condJ < 1e3:
+                    return pose, solution
+                else:
+                    self.get_logger().debug(f"Fallback rejected: near singularity (cond={condJ:.2e})")
+        return None
     
 
 def main(args=None):

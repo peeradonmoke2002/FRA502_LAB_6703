@@ -28,9 +28,8 @@ ament_python_install_package(${PROJECT_NAME})
 # Install Python executables
 install(PROGRAMS
   scripts/dummy_script.py
-  scripts/controller.py
+  # scripts/controller.py
   scripts/controller_bt.py
-  scripts/workspace.py
   scripts/random_pos.py
   scripts/teleop_jog_key.py
   DESTINATION lib/${PROJECT_NAME}
@@ -53,7 +52,7 @@ install(TARGETS
 ################ INSTALL LAUNCH, ETC #################
 install(DIRECTORY
   launch
-  config
+  rviz
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()
