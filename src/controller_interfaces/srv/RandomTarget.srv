@@ -1,0 +1,11 @@
+# RandomTarget.srv - Service for requesting random target in Auto Mode
+
+# Request
+bool request_new_target                # Request a new random target
+
+---
+
+# Response
+bool success                           # True if random target generated
+geometry_msgs/Point target_position    # Random target position (x, y, z)
+string message                         # Status or error message

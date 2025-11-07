@@ -1,0 +1,11 @@
+# InverseKinematics.srv - Service for solving IK
+
+# Request
+geometry_msgs/Point target_position   # Target position (x, y, z)
+
+---
+
+# Response
+bool success                           # True if IK solution found
+float64[] solution                     # Joint angles if success=True
+string message                         # Status or error message

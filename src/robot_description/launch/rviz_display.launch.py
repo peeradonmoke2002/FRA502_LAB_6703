@@ -58,7 +58,7 @@ def generate_launch_description():
     # Add launch actions
     launch_description.add_action(rviz)
     launch_description.add_action(rsp)
-    # launch_description.add_action(joint_state_publisher)
-    launch_description.add_action(joint_state_gui)
+    launch_description.add_action(joint_state_publisher)
+    # launch_description.add_action(joint_state_gui)
 
     return launch_description

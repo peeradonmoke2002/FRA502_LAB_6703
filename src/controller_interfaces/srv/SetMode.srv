@@ -1,0 +1,10 @@
+# SetMode.srv - Service to switch controller modes
+
+# Request
+string mode              # Mode to switch to: "IPK", "TO", or "AM", or "IDLE"
+
+---
+
+# Response  
+bool success             # True if mode switch successful
+string message           # Status or error message
