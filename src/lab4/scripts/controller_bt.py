@@ -20,8 +20,15 @@ from controller_interfaces.srv import SetMode, InverseKinematics, RandomTarget
 from lab4.rrr_dh import RRRRobot
 from lab4.bt_mode import IsWhatMode
 from lab4.bt_ipk_mode import IPKMode
-from lab4.bt_to_mode import TOMode
-from lab4.bt_am_mode import AMMode
+from lab4.bt_to_mode import create_teleop_mode_tree
+
+# AM Mode implementations:
+# Option 1: Monolithic approach (single behavior with internal state machine)
+# from lab4.bt_am_mode import AMMode
+
+# Option 2: Composed approach (proper BT with multiple specialized behaviors)
+from lab4.bt_am_mode_composed import create_am_mode_tree
+
 import py_trees
 import py_trees_ros
 
@@ -187,17 +194,32 @@ class ControllerBTNode(Node):
         ])
 
         # TO Mode: Sequence of [Check → Execute]
+        to_mode_tree = create_teleop_mode_tree(node=self, robot=self.robot, tf_buffer=self.tf_buffer)
         to_seq = py_trees.composites.Sequence(name="TO_Mode", memory=False)
         to_seq.add_children([
             IsWhatMode(name="CheckTO", mode="TO"),
-            TOMode(name="RunTO", node=self, robot=self.robot, tf_buffer=self.tf_buffer)
+            to_mode_tree
         ])
+        # to_seq = py_trees.composites.Sequence(name="TO_Mode", memory=False)
+        # to_seq.add_children([
+        #     IsWhatMode(name="CheckTO", mode="TO"),
+        #     TOMode(name="RunTO", node=self, robot=self.robot, tf_buffer=self.tf_buffer)
+        # ])
 
         # AM Mode: Sequence of [Check → Execute]
+        # Option 1: Monolithic approach (single behavior)
+        # am_seq = py_trees.composites.Sequence(name="AM_Mode", memory=False)
+        # am_seq.add_children([
+        #     IsWhatMode(name="CheckAM", mode="AM"),
+        #     AMMode(name="RunAM", node=self, robot=self.robot)
+        # ])
+
+        # Option 2: Composed approach (proper BT with multiple behaviors)
+        am_mode_tree = create_am_mode_tree(node=self, robot=self.robot)
         am_seq = py_trees.composites.Sequence(name="AM_Mode", memory=False)
         am_seq.add_children([
             IsWhatMode(name="CheckAM", mode="AM"),
-            AMMode(name="RunAM", node=self, robot=self.robot)
+            am_mode_tree
         ])
 
         # Root selector tries each mode sequence in order
