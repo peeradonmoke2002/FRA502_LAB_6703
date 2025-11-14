@@ -1,40 +1,27 @@
 import py_trees
-import py_trees_ros
-from controller_interfaces.srv import SetMode, InverseKinematics, RandomTarget
-import numpy as np
-
+from controller_interfaces.srv import SetMode
 
 class SetModeService(py_trees.behaviour.Behaviour):
-    """
-    Behavior that creates the SetMode service and handles mode switching.
-    Updates the blackboard with current mode.
-    """
 
     def __init__(self, name, node):
         super(SetModeService, self).__init__(name)
         self.node = node
         self.mode_service = None
-        self.mode = "TO"  # Default to Teleoperation mode
-
+        self.mode = "TO"
         self.blackboard = self.attach_blackboard_client(name=self.__class__.__name__)
         self.blackboard.register_key(
             key="mode",
             access=py_trees.common.Access.WRITE
         )
- 
-
     def setup(self, **kwargs):
-        """Create service only once"""
         if self.mode_service is None:
             self.mode_service = self.node.create_service(
                 SetMode, 'set_mode', self.set_mode_callback
             )
-            # Initialize blackboard with default values
             self.blackboard.mode = self.mode
             self.node.get_logger().info("SetMode service created and blackboard initialized")
 
     def set_mode_callback(self, request, response):
-        """Service callback to switch controller mode"""
         requested_mode = request.mode.upper()
         valid_modes = ["IPK", "TO", "AM"]
 
@@ -53,16 +40,12 @@ class SetModeService(py_trees.behaviour.Behaviour):
         return response
 
     def update(self):
-        """Service is running, always return SUCCESS"""
         return py_trees.common.Status.SUCCESS
 
     def terminate(self, new_status):
-        """Cleanup if needed"""
         return super().terminate(new_status)
 
-
 class IsWhatMode(py_trees.behaviour.Behaviour):
-    """Check if current mode is IPK or TO or AM based on given mode"""
 
     def __init__(self, name, mode):
         super(IsWhatMode, self).__init__(name)

@@ -2,6 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 import sys
@@ -51,26 +52,35 @@ def getKey(settings):
 class TeleopJogKey(Node):
     def __init__(self):
         super().__init__('teleop_jog_key')
-
-        # Publisher for cmd_vel
         self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-
-        # Publisher for frame switching
-        self.frame_pub = self.create_publisher(String, '/teleop_frame', 10)
-
-        # Publisher for reset command
+        qos = QoSProfile(
+            depth=10,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.frame_pub = self.create_publisher(String, '/teleop_frame', qos)
         self.reset_pub = self.create_publisher(String, '/reset_pose', 10)
+        self.singularity_sub = self.create_subscription(String, '/singularity_warning', self.singularity_callback, 10)
 
-        # Velocity settings
+ 
         self.speed = 0.1  # m/s - linear speed increment
         self.vx = 0.0
         self.vy = 0.0
         self.vz = 0.0
 
-        # Frame mode
         self.frame_mode = "tool"  # "tool" or "world"
 
+        frame_msg = String()
+        frame_msg.data = self.frame_mode
+        self.frame_pub.publish(frame_msg)
+
         self.get_logger().info("Teleop Jog Key node started")
+        self.get_logger().info(f"Initial frame mode: {self.frame_mode}")
+
+    def singularity_callback(self, msg):
+        """Handle singularity warning messages"""
+        self.get_logger().warn(f"Singularity Warning: {msg.data}")
+        # Optionally, stop motion on singularity
+        self.stop()
 
     def publish_velocity(self, vx, vy, vz):
         """Publish Twist message with given velocities"""

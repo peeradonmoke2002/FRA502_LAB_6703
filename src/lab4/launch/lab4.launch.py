@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -41,7 +41,6 @@ def generate_launch_description():
         }]
     )
 
-    # Controller Node - handles IPK, TO, and AM modes
     controller_node = Node(
         package=lab4_pkg,
         executable='controller_bt.py',
@@ -49,7 +48,6 @@ def generate_launch_description():
         output='screen',
     )
 
-    # Random Pose Node - generates random valid targets within workspace
     random_pose_node = Node(
         package=lab4_pkg,
         executable='random_pos.py',
@@ -57,7 +55,6 @@ def generate_launch_description():
         output='screen',
     )
 
-    # RViz2 with LAB4 configuration
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',

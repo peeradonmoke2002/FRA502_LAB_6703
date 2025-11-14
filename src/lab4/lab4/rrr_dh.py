@@ -3,7 +3,6 @@ from roboticstoolbox.robot.ERobot import ERobot
 from ament_index_python import get_package_share_directory
 import os
 
-
 class RRRRobot(ERobot):
     def __init__(self):
         pkg_path = os.path.join(get_package_share_directory('robot_description'))

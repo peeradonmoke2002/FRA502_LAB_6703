@@ -1,38 +1,34 @@
 #!/usr/bin/python3
 
+# ROS2 imports
 import rclpy
 from rclpy.node import Node
 
+# Kinematic Library
 from tf2_ros import TransformListener, Buffer
-from geometry_msgs.msg import TransformStamped, Twist, PoseStamped
-from std_msgs.msg import String, Header
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Header
 import numpy as np
-
-import roboticstoolbox as rtb
 from spatialmath import SE3
 from scipy.spatial.transform import Rotation as R  # Import scipy Rotation
-from sensor_msgs.msg import JointState  # Import JointState message
 
 # Custom service
-from controller_interfaces.srv import SetMode, InverseKinematics, RandomTarget
+from controller_interfaces.srv import SetMode, InverseKinematics
 
 # DH Robot
 from lab4.rrr_dh import RRRRobot
+
+# Import behaviors and mode trees
 from lab4.bt_mode import IsWhatMode
-from lab4.bt_ipk_mode import IPKMode
+from lab4.bt_ipk_mode import create_ipk_mode_tree
 from lab4.bt_to_mode import create_teleop_mode_tree
-
-# AM Mode implementations:
-# Option 1: Monolithic approach (single behavior with internal state machine)
-# from lab4.bt_am_mode import AMMode
-
-# Option 2: Composed approach (proper BT with multiple specialized behaviors)
-from lab4.bt_am_mode_composed import create_am_mode_tree
+from lab4.bt_am_mode import create_am_mode_tree
 
 import py_trees
 import py_trees_ros
 
 class ControllerBTNode(Node):
+    
     def __init__(self):
         super().__init__('controller_bt_node')
 
@@ -45,12 +41,14 @@ class ControllerBTNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
         self.endeff_pub = self.create_publisher(PoseStamped, '/end_effector', 10)
 
         # Create services
         self.mode_service = self.create_service(SetMode, 'set_mode', self.set_mode_callback)
         self.ipk_service = self.create_service(InverseKinematics, 'inverse_kinematics', self.ipk_service_callback)
+
+        # Publisher for target visualization
+        self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
 
         # Create behavior tree
         self.tree = None
@@ -60,14 +58,11 @@ class ControllerBTNode(Node):
         self.timer = self.create_timer(self.dt_loop, self.tick_callback)
         self.prev_time = self.get_clock().now()
 
-
     def set_mode_callback(self, request, response):
-        """Service callback to switch controller mode - updates blackboard"""
         requested_mode = request.mode.upper()
         valid_modes = ["IPK", "TO", "AM"]
 
         if requested_mode in valid_modes:
-            # Update blackboard so IsWhatMode behaviors can see the change
             self.blackboard.mode = requested_mode
             response.success = True
             response.message = f"Mode switched to {requested_mode}"
@@ -81,28 +76,31 @@ class ControllerBTNode(Node):
         return response
 
     def ipk_service_callback(self, request, response):
-        """Service callback for Inverse Position Kinematics"""
+        response = InverseKinematics.Response()
+
         target_pos = np.array([
             request.target_position.x,
             request.target_position.y,
             request.target_position.z
         ])
 
-        self.get_logger().info(f"IPK service called for target: {target_pos}")
+        self.get_logger().info(f"[IPK] Service called for target: {target_pos}")
 
-        # Solve IK to check if target is reachable
         q_solution = self.inverse_kinematic(target_pos)
 
         if q_solution is not None:
-            # Store target on blackboard for IPKMode behavior to move towards
             self.blackboard.target_position = target_pos
-            # Publish target with the orientation from IK solution
+            self.blackboard.ipk_target_reachable = True
             self.publish_target(target_pos, q_solution)
+
             response.success = True
             response.solution = q_solution.tolist()
             response.message = f"IK solved successfully - robot will move to target"
             self.get_logger().info(response.message)
         else:
+            self.blackboard.ipk_target_reachable = False
+            self.blackboard.target_position = None  
+
             response.success = False
             response.solution = []
             response.message = f"IK failed for target {target_pos} - target unreachable"
@@ -111,58 +109,33 @@ class ControllerBTNode(Node):
         return response
 
     def publish_target(self, target_pos, q_solution):
-        """Publish target position for RViz visualization with end effector orientation"""
         target_msg = PoseStamped()
         target_msg.header = Header()
         target_msg.header.stamp = self.get_clock().now().to_msg()
         target_msg.header.frame_id = "link_0"
-        
+
         target_msg.pose.position.x = float(target_pos[0])
         target_msg.pose.position.y = float(target_pos[1])
         target_msg.pose.position.z = float(target_pos[2])
-        
-        # Get the orientation from the IK solution to match end effector
+
         T = self.robot.fkine(q_solution)
-        # Extract rotation matrix
-        rot_matrix = T.R  # 3x3 rotation matrix
-        
-        # Rotate by -90° around Y-axis so arrow (X-axis) points in direction of end effector Z-axis
-        # This aligns the RViz arrow with the end effector's forward direction
+        rot_matrix = T.R  
         rotation_adjust = R.from_euler('y', -np.pi/2)
         r = R.from_matrix(rot_matrix) * rotation_adjust
-        quat = r.as_quat()  # [x, y, z, w]
-        
+        quat = r.as_quat()  
         target_msg.pose.orientation.x = float(quat[0])
         target_msg.pose.orientation.y = float(quat[1])
         target_msg.pose.orientation.z = float(quat[2])
         target_msg.pose.orientation.w = float(quat[3])
-        
+
         self.target_pub.publish(target_msg)
 
     def inverse_kinematic(self, target_pos):
         """Solve inverse kinematics for target position with consistent orientation"""
         try:
-            # Create target transformation with position and desired orientation
-            # Use a consistent downward-pointing orientation for all targets
             T_target = SE3(target_pos[0], target_pos[1], target_pos[2]) @ SE3.Rx(np.pi/2)
 
-            # Method 1: LM with current position as seed - constrain position only
             sol = self.robot.ikine_LM(T_target, q0=self.robot.qz, mask=[1, 1, 1, 0, 0, 0])
-            if sol.success:
-                return sol.q
-
-            # Method 2: LM with zero configuration
-            sol = self.robot.ikine_LM(T_target, q0=np.zeros(self.robot.n), mask=[1, 1, 1, 0, 0, 0])
-            if sol.success:
-                return sol.q
-
-            # Method 3: Random seed
-            q_random = np.random.uniform(
-                self.robot.qlim[0, :],
-                self.robot.qlim[1, :],
-                self.robot.n
-            )
-            sol = self.robot.ikine_LM(T_target, q0=q_random, mask=[1, 1, 1, 0, 0, 0])
             if sol.success:
                 return sol.q
 
@@ -173,26 +146,26 @@ class ControllerBTNode(Node):
             return None
 
     def create_behavior_tree(self):
-            """Build and setup the behavior tree."""
-            # Initialize blackboard BEFORE creating tree
-            self.blackboard = py_trees.blackboard.Client(name="ControllerBTNode")
-            self.blackboard.register_key(key="mode", access=py_trees.common.Access.WRITE)
-            self.blackboard.register_key(key="target_position", access=py_trees.common.Access.WRITE)
-            self.blackboard.mode = "TO"  # Default to Teleoperation mode
-            self.blackboard.target_position = None
-            self.tree = self.create_queue_tree()
+        self.blackboard = py_trees.blackboard.Client(name="ControllerBTNode")
+        self.blackboard.register_key(key="mode", access=py_trees.common.Access.WRITE)
+        self.blackboard.register_key(key="target_position", access=py_trees.common.Access.WRITE)
+        self.blackboard.register_key(key="ipk_target_reachable", access=py_trees.common.Access.WRITE)
+        self.blackboard.mode = "TO" 
+        self.blackboard.target_position = None
+        self.blackboard.ipk_target_reachable = None 
+        self.tree = self.create_queue_tree()
 
     def create_queue_tree(self):
         # Root: Selector picks which mode to run
         root = py_trees.composites.Selector(name="Root", memory=False)
 
         # IPK Mode: Sequence of [Check → Execute]
+        ipk_mode_tree = create_ipk_mode_tree(node=self, robot=self.robot)
         ipk_seq = py_trees.composites.Sequence(name="IPK_Mode", memory=False)
         ipk_seq.add_children([
             IsWhatMode(name="CheckIPK", mode="IPK"),
-            IPKMode(name="RunIPK", node=self, robot=self.robot)
+            ipk_mode_tree
         ])
-
         # TO Mode: Sequence of [Check → Execute]
         to_mode_tree = create_teleop_mode_tree(node=self, robot=self.robot, tf_buffer=self.tf_buffer)
         to_seq = py_trees.composites.Sequence(name="TO_Mode", memory=False)
@@ -200,21 +173,7 @@ class ControllerBTNode(Node):
             IsWhatMode(name="CheckTO", mode="TO"),
             to_mode_tree
         ])
-        # to_seq = py_trees.composites.Sequence(name="TO_Mode", memory=False)
-        # to_seq.add_children([
-        #     IsWhatMode(name="CheckTO", mode="TO"),
-        #     TOMode(name="RunTO", node=self, robot=self.robot, tf_buffer=self.tf_buffer)
-        # ])
-
         # AM Mode: Sequence of [Check → Execute]
-        # Option 1: Monolithic approach (single behavior)
-        # am_seq = py_trees.composites.Sequence(name="AM_Mode", memory=False)
-        # am_seq.add_children([
-        #     IsWhatMode(name="CheckAM", mode="AM"),
-        #     AMMode(name="RunAM", node=self, robot=self.robot)
-        # ])
-
-        # Option 2: Composed approach (proper BT with multiple behaviors)
         am_mode_tree = create_am_mode_tree(node=self, robot=self.robot)
         am_seq = py_trees.composites.Sequence(name="AM_Mode", memory=False)
         am_seq.add_children([
@@ -224,7 +183,6 @@ class ControllerBTNode(Node):
 
         # Root selector tries each mode sequence in order
         root.add_children([ipk_seq, to_seq, am_seq])
-
 
         # Create tree
         tree = py_trees_ros.trees.BehaviourTree(root, unicode_tree_debug=False)
