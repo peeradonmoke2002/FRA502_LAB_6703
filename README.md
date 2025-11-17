@@ -38,7 +38,7 @@ rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
 2.1. Due to this repository use behavior tree (py_tree) to manage state, please install the following package
 
 ```bash
-$ sudo apt install \
+sudo apt install \
     ros-humble-py-trees \
     ros-humble-py-trees-ros-interfaces \
     ros-humble-py-trees-ros \
