@@ -12,6 +12,11 @@ Peeradon Ruengkaew 6703 (Moke)
 Comming soon...
 
 
+## Behavior Tree Diagram
+The behavior tree used in this lab is designed to manage the robot arm's:
+
+![BT_diagram](images/controller_bt_tree.png)
+
 
 ## Installation 
 

@@ -10,6 +10,7 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Header
 import numpy as np
 from spatialmath import SE3
+from pathlib import Path
 from scipy.spatial.transform import Rotation as R  # Import scipy Rotation
 
 # Custom service
@@ -192,6 +193,19 @@ class ControllerBTNode(Node):
         self.snapshot_visitor = snapshot_visitor
 
         tree.setup(timeout=15.0, node=self)
+
+        # Export DOT graph of the behavior tree for debugging
+        try:
+            dot_dir = Path("/home/peeradon/FRA502_LAB_6703/images")
+            py_trees.display.render_dot_tree(
+                root,
+                target_directory=str(dot_dir),
+                name="controller_bt_tree"
+            )
+            self.get_logger().info(f"Behavior tree DOT exported to {dot_dir}")
+        except Exception as exc:
+            self.get_logger().warn(f"Failed to render behavior tree DOT: {exc}")
+
         return tree
 
     def post_tick_handler(self, snapshot_visitor, behaviour_tree):
