@@ -12,6 +12,7 @@ Peeradon Ruengkaew 6703 (Moke)
 ## System Architecture
 ![System Architecture](images/system_architecture.png)
 
+For better view please vist [system_architecture.pdf](./system_architecture.pdf)
 
 ## Behavior Tree Diagram
 The behavior tree used in this lab is designed to manage the robot arm's:
