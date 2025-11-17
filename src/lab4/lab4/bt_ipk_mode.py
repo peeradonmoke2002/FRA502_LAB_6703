@@ -79,6 +79,8 @@ class MoveToTarget(py_trees.behaviour.Behaviour):
             self.node.get_logger().info(
                 f"[IPK] Target reached (error: {error_norm:.4f}m)"
             )
+            self.blackboard.ipk_in_singularity = False
+            self.blackboard.ipk_singularity_start_time = None
             self.publish_joint_states()
             return py_trees.common.Status.SUCCESS
 
@@ -86,9 +88,12 @@ class MoveToTarget(py_trees.behaviour.Behaviour):
         J_pos = J[:3, :]
         condJ = np.linalg.cond(J_pos)
 
-        if condJ <= 1e3 and self.blackboard.ipk_singularity_start_time is not None:
-            self.node.get_logger().info("[IPK] Exited singularity region")
-            self.blackboard.ipk_singularity_start_time = None
+        if condJ <= 1e3:
+            if self.blackboard.ipk_singularity_start_time is not None:
+                self.node.get_logger().info("[IPK] Exited singularity region")
+                self.blackboard.ipk_singularity_start_time = None
+            if getattr(self.blackboard, "ipk_in_singularity", False):
+                self.blackboard.ipk_in_singularity = False
 
         if condJ > 1e3:
             if self.blackboard.ipk_singularity_start_time is None:
@@ -102,6 +107,8 @@ class MoveToTarget(py_trees.behaviour.Behaviour):
                 self.blackboard.ipk_in_singularity = True
                 self.publish_joint_states()
                 return py_trees.common.Status.RUNNING
+            else:
+                self.blackboard.ipk_in_singularity = False
 
             self.node.get_logger().warn(
                 f"[IPK] Near singularity (cond={condJ:.2e}, {singularity_elapsed:.1f}s)",

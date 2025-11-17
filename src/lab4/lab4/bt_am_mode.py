@@ -188,9 +188,9 @@ class RequestTarget(py_trees.behaviour.Behaviour):
             self.last_request_success = None
             return py_trees.common.Status.SUCCESS
         
-        if not self.random_target_client.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().warn("[AM] Random target service not available")
-            return py_trees.common.Status.FAILURE
+        if not self.random_target_client.service_is_ready():
+            self.node.get_logger().warn("[AM] Random target service not available", throttle_duration_sec=5.0)
+            return py_trees.common.Status.RUNNING
 
         if self.requesting:
             if self.future is not None and self.future.done():

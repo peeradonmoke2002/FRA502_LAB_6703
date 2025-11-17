@@ -142,8 +142,8 @@ class TOMode_worldframe(py_trees.behaviour.Behaviour):
         if T_current is None:
             return py_trees.common.Status.RUNNING
 
-        T_rot = T_current[0:3, 0:3]
-        p_dot = T_rot @ self.cmd_vel
+        # World frame commands are already expressed in the base frame
+        p_dot = self.cmd_vel
 
         J = self.robot.jacob0(self.robot.qz)
         J_pos = J[:3, :]  
@@ -262,7 +262,8 @@ class TOMode_toolframe(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.RUNNING
 
         T_rot = T_current[0:3, 0:3]
-        p_dot = self.cmd_vel
+        # Tool frame commands must be rotated into the base frame
+        p_dot = T_rot @ self.cmd_vel
 
         J = self.robot.jacob0(self.robot.qz)
         J_pos = J[:3, :]  # Position part only
