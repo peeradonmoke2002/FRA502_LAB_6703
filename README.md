@@ -9,7 +9,7 @@ Peeradon Ruengkaew 6703 (Moke)
 
 
 ## System Architecture
-Comming soon...
+![System Architecture](images/system_architecture.png)
 
 
 ## Behavior Tree Diagram

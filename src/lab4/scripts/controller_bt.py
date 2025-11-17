@@ -194,17 +194,13 @@ class ControllerBTNode(Node):
 
         tree.setup(timeout=15.0, node=self)
 
-        # Export DOT graph of the behavior tree for debugging
-        try:
-            dot_dir = Path("/home/peeradon/FRA502_LAB_6703/images")
-            py_trees.display.render_dot_tree(
-                root,
-                target_directory=str(dot_dir),
-                name="controller_bt_tree"
-            )
-            self.get_logger().info(f"Behavior tree DOT exported to {dot_dir}")
-        except Exception as exc:
-            self.get_logger().warn(f"Failed to render behavior tree DOT: {exc}")
+
+        # dot_dir = Path("../../images")
+        # py_trees.display.render_dot_tree(
+        #     root,
+        #     target_directory=str(dot_dir),
+        #     name="controller_bt_tree"
+        # )
 
         return tree
 
