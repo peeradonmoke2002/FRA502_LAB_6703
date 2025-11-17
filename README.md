@@ -3,6 +3,7 @@ Peeradon Ruengkaew 6703 (Moke)
 
 ## Table of Contents
 - [System Architecture](#system-architecture)
+- [Behavior Tree Diagram](#behavior-tree-diagram)
 - [Installation](#installation)
 - [Usage](#usage)
 
