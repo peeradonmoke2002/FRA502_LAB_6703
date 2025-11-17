@@ -7,8 +7,6 @@ Peeradon Ruengkaew 6703 (Moke)
 - [Installation](#installation)
 - [Usage](#usage)
 
-
-
 ## System Architecture
 ![System Architecture](images/system_architecture.png)
 
@@ -19,6 +17,30 @@ The behavior tree used in this lab is designed to manage the robot arm's:
 
 ![BT_diagram](images/controller_bt_tree.png)
 
+### What is Behavior Tree?
+Behavior Tree (BT) is a hierarchical model used to control the decision-making process of autonomous agents, such as robots or game characters. It consists of nodes that represent actions, conditions, and control flow. 
+
+### Composites Node
+![Composites Node](images/bt_composites.png)
+
+- Sequence: The sequence node executes its child nodes in order until one fails. If all child nodes succeed, the sequence node returns success.
+
+![Sequence](images/bt_sequence.png)
+
+- Selector: The selector node executes its child nodes in order until one succeeds. If a child node succeeds, the selector node returns success. If all child nodes fail, the selector node returns failure
+
+![Selector](images/bt_selector.png) 
+
+### Leaf Node
+- Action Node: Action nodes perform specific tasks or actions, such as moving the robot arm to a target position or opening/closing the gripper. They return success, failure, or running status based on the outcome of the action.
+- Condition Node: Condition nodes evaluate specific conditions or states, such as checking if the robot arm has reached a target position or if an object is detected. They return success or failure based on the evaluation.
+
+### Status of Node
+- Success: The node has completed its task successfully.
+- Failure: The node has failed to complete its task.
+- Running: The node is still in the process of completing its task.
+
+More detail please visit [py_tree_documentation](https://py-trees.readthedocs.io/en/devel/)
 
 ## Installation 
 
