@@ -7,6 +7,11 @@ Peeradon Ruengkaew 6703 (Moke)
 - [Installation](#installation)
 - [Usage](#usage)
 
+## Demo Video
+![Demo Video](images/demo.gif)
+
+For better view please visit [demo_video.mp4](./images/demo.mp4)
+
 ## System Architecture
 ![System Architecture](images/system_architecture.png)
 
