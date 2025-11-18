@@ -10,7 +10,7 @@ Peeradon Ruengkaew 6703 (Moke)
   - [Behavior Tree Flow Explanation](#behavior-tree-flow-explanation)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Using Services to Control the Robot](#using-services-to-control-the-robot)
+
 
 ## Demo Video
 ![Demo Video](images/demo.gif)
