@@ -319,6 +319,8 @@ ros2 service call /set_mode controller_interfaces/srv/SetMode "{mode: 'AM'}"
 
 #### Alternative: Using rqt_service_caller (GUI Method)
 
+![rqt_service ](images/rqt_service.png)
+
 Alternatively, you can use the rqt_service_caller GUI to control the robot:
 
 1. Select the service from the dropdown menu (e.g., `/set_mode` or `/inverseKinematics`)
