@@ -2,10 +2,20 @@
 Peeradon Ruengkaew 6703 (Moke)
 
 ## Table of Contents
+- [Demo Video](#demo-video)
 - [System Architecture](#system-architecture)
-- [Behavior Tree Diagram](#behavior-tree-diagram)
+  - [System Architecture Explanation](#system-architecture-explanation)
+- [Behavior Tree](#behavior-tree)
+  - [Node Descriptions](#node-descriptions)
+  - [Behavior Tree Flow Explanation](#behavior-tree-flow-explanation)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Using Services to Control the Robot](#using-services-to-control-the-robot)
+  - [1. IPK Mode (Inverse Position Kinematics)](#1-ipk-mode-inverse-position-kinematics)
+  - [2. TO Mode (Teleoperation)](#2-to-mode-teleoperation)
+  - [3. AM Mode (Auto Mode)](#3-am-mode-auto-mode)
+  - [Using rqt_service_caller (GUI Method)](#using-rqt_service_caller-gui-method)
+  - [Monitoring the System](#monitoring-the-system)
 
 ## Demo Video
 ![Demo Video](images/demo.gif)
@@ -153,7 +163,7 @@ Based on the behavior tree diagram above, the system operates with three main co
 git clone https://github.com/peeradonmoke2002/FRA502_LAB_6703.git -b LAB4
 ```
 
-2. Navigate to the cloned repository and Install dependencies
+2. Navigate to the cloned repository and install dependencies
 
 ```bash
 cd FRA502_LAB_6703
@@ -162,7 +172,7 @@ rosdep update
 rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
 ```
 
-2.1. Due to this repository use behavior tree (py_tree) to manage state, please install the following package
+2.1. Since this repository uses behavior tree (py_tree) to manage state, please install the following packages
 
 ```bash
 sudo apt install \
@@ -213,7 +223,7 @@ You should see the following in RViz2:
 ros2 run lab4 teleop_jog_key.py 
 ```
 
-the output should be like this:
+The output should be like this:
 
 ```bash
 Control Your Robot Arm!
@@ -249,7 +259,7 @@ ros2 run rqt_service_caller rqt_service_caller
 You should see the following window:
 ![rqt_service ](images/rqt_service.png)
 
-4. And run py_tree viewer to see the behavior tree status:
+4. Finally, run py_tree viewer to see the behavior tree status:
 
 ```bash
 py-trees-ros-viewer 
@@ -257,3 +267,71 @@ py-trees-ros-viewer
 You should see the following window:
 
 ![py_tree_view](images/py_tree_view.png)
+
+## Using Services to Control the Robot
+
+The robot can be controlled through three different modes using the `/set_mode` service. Below are examples of how to use each mode:
+
+### 1. IPK Mode (Inverse Position Kinematics)
+
+To switch to IPK mode and send a target position:
+
+**Step 1:** Set mode to IPK
+```bash
+ros2 service call /set_mode controller_interfaces/srv/SetMode "{mode: 'IPK'}"
+```
+
+**Step 2:** Send target position using the inverse kinematics service
+```bash
+ros2 service call /inverseKinematics controller_interfaces/srv/InverseKinematics "{x: 0.3, y: 0.2, z: 0.4}"
+```
+
+**Expected Behavior:**
+- If IK solution exists: Robot moves to the target position, service returns `success: true` with joint configurations
+- If IK solution doesn't exist: Robot stays in place, service returns `success: false`
+
+### 2. TO Mode (Teleoperation)
+
+To switch to Teleoperation mode:
+
+```bash
+ros2 service call /set_mode controller_interfaces/srv/SetMode "{mode: 'TO'}"
+```
+
+**Expected Behavior:**
+- Robot switches to teleoperation mode
+- You can now control the robot using keyboard commands from the `teleop_jog_key.py` node
+- Use 'w/a/s/d/q/e' keys to move the end effector
+- Press 'f' to toggle between tool frame and world frame
+- If approaching singularity, robot stops and publishes warning to `/singularity_warning` topic
+
+### 3. AM Mode (Auto Mode)
+
+To switch to Auto mode:
+
+```bash
+ros2 service call /set_mode controller_interfaces/srv/SetMode "{mode: 'AM'}"
+```
+
+**Expected Behavior:**
+- Robot automatically requests random target positions from `random_pos` node
+- Moves to each target within 10 seconds
+- Continuously loops to new random targets within the workspace
+- Checks for singularity before each movement
+
+### Using rqt_service_caller (GUI Method)
+
+Alternatively, you can use the rqt_service_caller GUI:
+
+1. Select the service from the dropdown menu (e.g., `/set_mode` or `/inverseKinematics`)
+2. Fill in the required parameters in the GUI form
+3. Click "Call" button to execute the service
+4. View the response in the output panel
+
+### Monitoring the System
+
+- **Behavior Tree Status**: Use `py-trees-ros-viewer` to visualize the current state of the behavior tree
+- **Joint States**: Monitor `/joint_states` topic to see current joint positions
+- **End Effector Position**: Monitor `/end_effector` topic to see current end effector pose
+- **Target Position**: Monitor `/target` topic to see the current target position
+- **Singularity Warnings**: Monitor `/singularity_warning` topic for safety alerts
